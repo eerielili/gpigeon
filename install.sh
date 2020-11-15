@@ -97,7 +97,7 @@ __check_setupvars() {
     APP_PW_SANE="$(echo $APP_PW | sed s/{/\\\\{/g | sed s/}/\\\\}/g)"
 
     # password checksum'd so no plaintext
-    HASHED_PASSWORD=$(printf "%s" "$APP_PW" | sha256sum)
+    HASHED_PASSWORD=$(printf "%s" "$APP_PW" | sha256sum | cut -d' ' -f1)
 
     if ! echo "$YOUR_EMAIL" | grep "$emailre" >/dev/null; then
         printf "\nYour email address is not a valid one. Edit $self_fullpath and
