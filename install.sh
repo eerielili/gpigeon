@@ -1,154 +1,138 @@
 # !/bin/sh
-THIS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+set -o errexit
+#set -o pipefail
+#set -o nounset
+#set -o xtrace
+
+BOLD='\033[01m'
+UNDL='\033[04m'
+GREEN='\033[32m'
+RED='\033[31m'
+STYLE_END='\033[0m'
+command -V gpg >/dev/null 2>&1 && GPG="gpg" || GPG="gpg2"
+self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+self_fullpath="$self_dir/$0"
 emailre=".\+@.\+\\..\+"
-GPIGEON_SCRIPT=$THIS_SCRIPT_DIR/cgi-bin/gpigeon.cgi
+
+### VARIABLES TO EDIT ###
+HAS_MAILSERVER=0 # 0 is the default, it'll use an external smtp server (your gmail
+# account /ISP subscriber mail address for example). Change to 1 if you have a local mail
+# server.
+YOUR_EMAIL=0
+GPG_XLONG='0x0000000000000000' # running 'gpg -k --keyid-format 0xlong yourmail@example.com' will
+# help you there.
+SMTP=0
+SMTP_P=465
+MAIL_PW=0
+SCRIPT="$self_dir/gpigeon.cgi"
 GPG_DATA_DIR='/usr/share/www-data'
 SCRIPT_USER='www-data'
-SCRIPT_GROUP=$SCRIPT_USER
-GPIGEON_ROOT_DIR='/var/www/gpigeon'
+SCRIPT_GROUP="$SCRIPT_USER"
+ROOT_DIR='/var/www/gpigeon'
+CGI_DIR="$ROOT_DIR/cgi-bin"
+LINKS_DIR="$CGI_DIR/l"
+APP_PW=0
+### END VARIABLES TO EDIT ###
 
+self_abort() {
+    printf "\n${BOLD}${RED}Aborting...${STYLE_END}\n"
+    exit 1
+}
 
-command -V gpg >/dev/null 2>&1 && GPG="gpg" || GPG="gpg2"
-printf "Welcome to the gpigeon.cgi installer. We will first install the
-dependencies.\n"
-
-#apt install perl gcc make cpanminus libnet-ssleay-perl || exit 1
-#cpanm Digest::SHA Email::Valid String::Random HTML::Entities CGI CGI::Carp Net::SMTP Net::SMTPS GPG || ( printf "\nInstallation of dependencies failed\n" && exit 1 )
-
-
-
-
-interact() {
-
-    if [ $INSTALLING eq 1 ]; then
-        echo "already installing !"
-        exit 1
-    fi
-
-    printf "Choose a password for the gpigeon web application: \n"
-    read -r -s _APP_PASSWORD
-
-    while [[ $_APP_PASSWORD_VERIFICATION != $_APP_PASSWORD ]]; do
-        printf "\nRepeat password: "
-        read -r -s _APP_PASSWORD_VERIFICATION
-    done
-
-    # prevent obscure errors with q{} from perl
-    _APP_PASSWORD="$(echo $_APP_PASSWORD | sed s/{/\\\\{/g | sed s/}/\\\\}/g)"
-    HASHED_PASSWORD=`perl -e "use Digest::SHA qw(sha256_hex);print sha256_hex(q{$_APP_PASSWORD});"`
-    printf "\nPassword matches. The SHA256 hash of it is: \033[32m$HASHED_PASSWORD\033[0m\n"
-
-    printf "\nWhat is your email address: "
-    read -r _YOUR_EMAIL
-    while ! echo "$_YOUR_EMAIL" | grep "$emailre" >/dev/null; do
-        printf "\nYour email address is not a valid one. Type it again: "
-        read -r _YOUR_EMAIL
-    done
-    printf "\033[32m$_YOUR_EMAIL\033[0m seems a valid e-mail address."
-
-    while [[ -z $_YOUR_EMAIL_PASSWORD ]]; do
-        printf "\nPassword for your email account: "
-        read -r -s _YOUR_EMAIL_PASSWORD
-    done
-
-    while [[ $_YOUR_EMAIL_PASSWORD_VERIFICATION != $_YOUR_EMAIL_PASSWORD ]]; do
-        printf "\nAgain for confirmation: "
-        read -r -s _YOUR_EMAIL_PASSWORD_VERIFICATION
-    done
-
-    _YOUR_EMAIL_PASSWORD_VERIFICATION=$(printf '%s\n' "$_YOUR_EMAIL_PASSWORD" | sed -e 's/[]\/$*.^[]/\\&/g');
-
-
-    domain="$(echo "$_YOUR_EMAIL" | sed "s/.*@//")"
-    serverinfo="$(grep "^$domain" "domains.csv" 2>/dev/null)"
-    if [ -z "$serverinfo" ]; then
-        printf "\nAh. Your email domain isn't listed in the domains.csv file. Don't
-        worry, you can find info relating to that easily on the domain website /
-        the Internet, and type it in here."
-        while ! echo "$smtp" | grep -Eo "[.[:alnum:]]"; do
-            printf "\nWhat is the SMTP server address of your domain (typically like this: smtp.domain.net)? "
-            read -r smtp
-        done
-
-        while ! echo "$sport" | grep -Eo "[0-9]{1,5}"; do
-            printf "\nWhat is the SMTP server port (typically 465 or 587) ? "
-            read -r sport
-        done
+list_setupvars() {
+    printf "\nThis is what has been configured so far:"
+    printf "\nGpigeon root directory: %s" "$ROOT_DIR"
+    printf "\nCGI script directory: %s" "$CGI_DIR"
+    printf "\nGpigeon ownership: %s:%s" "$SCRIPT_USER" "$SCRIPT_GROUP"
+    printf "\nGpigeon links folder: %s" "$LINKS_DIR"
+    printf "\nGpigeon GPG homedir: %s" "$GPG_DATA_DIR"
+    printf "\nGPG public key id: %s" "$GPG_XLONG"
+    printf "\nLocal mailserver method: "   
+    if [ $HAS_MAILSERVER -eq 0 ]; then
+        printf "${RED}no${STYLE_END}\nMail address: %s\nMail password: %s\nExternal SMTP server and port: %s:%s\n" "$YOUR_EMAIL" "$MAIL_PW" "$SMTP" "$SMTP_P"
     else
-        print "Yay! Your email domain seems to be listed in domains.csv, so you don't
-        have to manually type the smtp server address and port manually."
-        IFS=, read service imap iport smtp sport <<EOF
-        $serverinfo
-EOF
-        # smtp and sport variable are the only useful variable for our use case
+        printf "${GREEN}yes${STYLE_END}\n"
     fi
-    gpgidlong="$($GPG -k --with-colons $_YOUR_EMAIL| awk -F: '/^pub:/ {print $5}')"
+    printf "App password: %s\n" "$APP_PW"
+    printf "\n"
 
-    if [ -z gpgid ]; then
+    printf "\nPress any key to continue (CTRL+C to abort)..."
+    read
+}
+
+__check_setupvars() {
+    if ! $GPG -k "$GPG_HEX" 2>/dev/null >/dev/null; then
         printf "No GPG key pair are related to your email. Create one and launch
-this script again."
-        exit 0
+    this script again."
+        self_abort
+    fi
+
+    if ! id $SCRIPT_USER; then
+        printf "\nThe user ${BOLD}$SCRIPT_USER${STYLE_END} doesn't exist. Edit
+    ${UNDL}$self_fullpath${STYLE_END} and search
+    for the ${BOLD}SCRIPT_USER${STYLE_END} variable.\n\n"
+        self_abort
+    fi
+
+    if ! getent group $SCRIPT_GROUP; then
+        echo "The ${BOLD}$SCRIPT_GROUP${END_STYLE} group doesn't exist. Edit $self_fullpath then modify
+    the SCRIPT_GROUP variable value."
+        self_abort
+    fi
+
+    if [ "$APP_PW" -eq "0" ] || [ -z $APP_PW ] ; then
+        echo "Please edit $0 with a text editor ($EDITOR I guess?) and change the
+        APP_PW variable."
+        self_abort
     else
-        printf "\nGPG keyid associated to $_YOUR_EMAIL : \033[32m0x$gpgidlong\033[0m."
+        PW_LENGTH=$(echo $APP_PW | wc -L)
+        if [ $PW_LENGTH -le 8 ]; then
+            echo "Your password is too short, make it lengthier than 8 characters."
+            self_abort
+        fi
     fi
 
-    while ! echo "$SCRIPT_DIR" | grep -Eo "^/"; do
-        printf "\nWhich directory you want the script to be in (defaults to
-        /var/www/cgi-bin/) ? Please provide an absolute path: "
-        read -r SCRIPT_DIR
-    done
+    # prevent obscure errors with q{$APP_PW} in perl script
+    APP_PW_SANE="$(echo $APP_PW | sed s/{/\\\\{/g | sed s/}/\\\\}/g)"
 
-    printf "\nWhat user and group you want to use for the gpigeon CGI script
-    (defaults to www-data for both):"
-    printf "\nUser: "
-    read -r SCRIPT_USER
-    printf "\nGroup (leave blank for same as user): "
-    read -r SCRIPT_GROUP
+    # password checksum'd so no plaintext
+    HASHED_PASSWORD=$(printf "%s" "$APP_PW" | sha256sum)
 
-    if [ -z SCRIPT_USER ]; then
-        SCRIPT_USER='www-data'
-    else
-        while ! id $SCRIPT_USER; do
-            printf "\nThe user you typed doesn't seem to exist. Try again with a valid one: "
-            read -r SCRIPT_USER
-        done
+    if ! echo "$YOUR_EMAIL" | grep "$emailre" >/dev/null; then
+        printf "\nYour email address is not a valid one. Edit $self_fullpath and
+        modify the value of the YOUR_EMAIL variable."
     fi
-
-    if [ -z SCRIPT_GROUP ]; then
-        SCRIPT_GROUP=$SCRIPT_USER
-    fi
-
-    printf "\nWhere will be put the static files ? Defaults to /var/www/gpigeon."
-    read -r GPIGEON_ROOT_DIR
 }
 
 setup_gpigeon() {
-    cp $THIS_SCRIPT_DIR/gpigeon-template.cgi $GPIGEON_SCRIPT
-    sed "s/password_hash_goes_here/$HASHED_PASSWORD/g" -i $GPIGEON_SCRIPT
-    sed "s/your_mail_address_goes_here/$_YOUR_EMAIL/g" -i $GPIGEON_SCRIPT
-    sed "s/your_mail_address_password_goes_here/$_YOUR_EMAIL_PASSWORD_VERIFICATION/g" -i $GPIGEON_SCRIPT
-    sed "s/smtp_domain_goes_here/$smtp/g" -i $GPIGEON_SCRIPT
-    sed "s/smtp_port_goes_here/$sport/g" -i $GPIGEON_SCRIPT
-    sed "s/gpgid_goes_here/$gpgidlong/g" -i $GPIGEON_SCRIPT
+    apt install perl gcc make cpanminus libnet-ssleay-perl || self_abort
+    cpanm Digest::SHA Email::Valid String::Random HTML::Entities CGI CGI::Carp Net::SMTP Net::SMTPS GPG || ( printf "\nInstallation of dependencies failed\n" && self_abort )
 
-    printf "\n\nCreating script directory at $SCRIPT_DIR ..."
-    mkdir -p "$SCRIPT_DIR/l" || exit 1
+    cp $self_dir/gpigeon-template.cgi $SCRIPT
+    sed "s/password_hash_goes_here/$HASHED_PASSWORD/g" -i $SCRIPT
+    sed "s/your_mail_address_goes_here/$YOUR_EMAIL/g" -i $SCRIPT
+    sed "s/your_mail_address_password_goes_here/$YOUR_EMAIL_PW/g" -i $SCRIPT
+    sed "s/smtp_domain_goes_here/$SMTP/g" -i $SCRIPT
+    sed "s/smtp_port_goes_here/$SMTP_P/g" -i $SCRIPT
+    sed "s/gpgid_goes_here/$gpgidlong/g" -i $SCRIPT
 
-    printf "\nCreating static files directory at $GPIGEON_ROOT_DIR"
-    mkdir -p "$GPIGEON_ROOT_DIR" || exit 1
+    printf "\nCreating static files directory at $ROOT_DIR"
+    mkdir -p "$ROOT_DIR" || self_abort
+    printf "\nCopying static files to $ROOT_DIR ..."
+    cp -r $self_dir/{merci/,index.html,gpigeon.css,favicon.ico} $ROOT_DIR || self_abort
 
-    printf "\nCopying personalized gpigeon.cgi script to $SCRIPT_DIR ..."
-    cp $GPIGEON_SCRIPT $SCRIPT_DIR/ || exit 1
+    printf "\n\nCreating script and links directory at $CGI_DIR ..."
+    mkdir -p {"$CGI_DIR","$LINKS_DIR"} || self_abort
 
-    printf "\nCopying static files to $GPIGEON_ROOT_DIR ..."
+    printf "\nCopying personalized gpigeon.cgi script to $CGI_DIR ..."
+    cp $SCRIPT $CGI_DIR/ || self_abort
 
-    cp $THIS_SCRIPT_DIR/{merci/,index.html,gpigeon.css,favicon.ico} $GPIGEON_ROOT_DIR || exit 1
+    printf "\nSetting ownership as $SCRIPT_USER:$SCRIPT_GROUP for directory $CGI_DIR ..."
+    chown $SCRIPT_GROUP:$SCRIPT_USER $CGI_DIR || self_abort
 
-    printf "\nSetting ownership as $SCRIPT_USER:$SCRIPT_GROUP for directory $SCRIPT_DIR ..."
-    chown $SCRIPT_GROUP:$SCRIPT_USER $SCRIPT_DIR || exit 1
-
-    printf "\nSetting ownership as $SCRIPT_USER:$SCRIPT_GROUP for static directory $GPIGEON_ROOT_DIR ..."
-    chown $SCRIPT_GROUP:$SCRIPT_USER $GPIGEON_ROOT_DIR || exit 1
+    printf "\nSetting ownership as $SCRIPT_USER:$SCRIPT_GROUP for static directory $ROOT_DIR ..."
+    chown $SCRIPT_GROUP:$SCRIPT_USER $ROOT_DIR || self_abort
 
     printf "\nSetting up the GPG directory for the script ..."
     if [[ -z $GPG_DATA_DIR ]]; then
@@ -162,33 +146,28 @@ setup_gpigeon() {
         chown $SCRIPT_USER:$SCRIPT_GROUP $GPG_DATA_DIR
         chmod 600 $GPG_DATA_DIR
     fi
-    printf "\n\033[32mCongrats, we are done! You should now configure your web server in
-    order to execute the CGI scripts in the $SCRIPT_DIR folder. Manuals and
-    official websites for these softwares should help you.\033[0m\n\n"
+    printf "${BOLD}${GREEN}Congrats, we are done!${END_STYLE} You should now manually configure your web server to execute the CGI scripts in the $CGI_DIR folder. Manuals and
+    official websites for these softwares should help you.\n\n"
+    exit 0
 }
 
-while getopts "iu:g:PAm" o; do
-    case "${o}" in
-        i)
-            interact
-            INSTALLING=1
-            setup_gpigeon;;
-        u)
-            SCRIPT_USER="$OPTARG"
-            echo user will be $SCRIPT_USER;;
-            #exit 0
-        g)
-            SCRIPT_GROUP="$OPTARG"
-            echo group will be $SCRIPT_GROUP;;
+_usage_(){
+    printf "\n  -c    checks variables"
+    printf "\n  -l    lists variables"
+    printf "\n  -y    checks variables and attempts to install gpigeon"
+    printf "\n  -s    install gpigeon"
+    printf "\n  -h    print this help"
+    printf "\n\n"
+}
 
-        P)
-            echo kek;;
-        A)
-            echo kuk;;
-        *)
-            printf "\nlol fuck off\n";;
-#            echo "$@"
-#            echo $GETOPTS
-    esac
-    shift
+while getopts "clysh" o; do
+   case "${o}" in
+       c) __check_setupvars && exit 0;;
+       l) list_setupvars && exit 0;;
+       y) __check_vars && setup_gpigeon;;
+       s) setup_gpigeon;;
+       h) _usage_;;
+       #i) interactive_setup;;
+       *) __check_vars && list_setupvars && setup_gpigeon
+   esac
 done
