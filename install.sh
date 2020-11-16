@@ -15,11 +15,14 @@ self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 self_fullpath="$self_dir/$0"
 emailre=".\+@.\+\\..\+"
 
-### VARIABLES TO EDIT ###
-HAS_MAILSERVER=0 # 0 is the default, it'll use an external smtp server (your gmail
-# account /ISP subscriber mail address for example). Change to 1 if you have a local mail
+### EDITABLE VARS ###
+# HAS_MAILSERVER: 0 is the default, it'll use an external smtp server (your gmail
+# account or ISP subscriber mail address for example) and you'll need to put
+# the mail password into the MAIL_PW variable, as well as the smtp server and
+# its port (SMTP and SMTP_P var respectively). Change to 1 if you have a local mail
 # server.
 # TODO: implement the sed trickery to disable and enable portions of perl code
+HAS_MAILSERVER=0
 YOUR_EMAIL=0
 GPG_XLONG='0x0000000000000000' # running 'gpg -k --keyid-format 0xlong yourmail@example.com' will
 # help you there.
@@ -34,7 +37,7 @@ ROOT_DIR='/var/www/gpigeon'
 CGI_DIR="$ROOT_DIR/cgi-bin"
 LINKS_DIR="$CGI_DIR/l"
 APP_PW=0
-### END VARIABLES TO EDIT ###
+### EDITABLE VARS ###
 
 self_abort() {
     printf "\n${BOLD}${RED}Aborting...${STYLE_END}\n"
@@ -49,7 +52,7 @@ list_setupvars() {
     printf "\nGpigeon links folder: %s" "$LINKS_DIR"
     printf "\nGpigeon GPG homedir: %s" "$GPG_DATA_DIR"
     printf "\nGPG public key id: %s" "$GPG_XLONG"
-    printf "\nLocal mailserver method: "   
+    printf "\nYou have a mailserver installed: "   
     if [ $HAS_MAILSERVER -eq 0 ]; then
         printf "${RED}no${STYLE_END}\nMail address: %s\nMail password: %s\nExternal SMTP server and port: %s:%s\n" "$YOUR_EMAIL" "$MAIL_PW" "$SMTP" "$SMTP_P"
     else
@@ -107,7 +110,7 @@ __check_setupvars() {
 }
 
 setup_gpigeon() {
-    apt install perl gcc make cpanminus libnet-ssleay-perl || self_abort
+    apt install perl gcc make cpanminus || self_abort
     cpanm Digest::SHA Email::Valid String::Random HTML::Entities CGI CGI::Carp Net::SMTP Net::SMTPS GPG || ( printf "\nInstallation of dependencies failed\n" && self_abort )
 
     cp $self_dir/gpigeon-template.cgi $SCRIPT
@@ -117,6 +120,10 @@ setup_gpigeon() {
     sed "s/smtp_domain_goes_here/$SMTP/g" -i $SCRIPT
     sed "s/smtp_port_goes_here/$SMTP_P/g" -i $SCRIPT
     sed "s/gpgid_goes_here/$gpgidlong/g" -i $SCRIPT
+    if [ $HAS_MAILSERVER -eq 1 ]; then
+        sed "s/HAS_MAILSERVER=0/HAS_MAILSERVER=1/g" $SCRIPT
+        cpamn Mail::Sendmail
+    fi    
 
     printf "\nCreating static files directory at $ROOT_DIR"
     mkdir -p "$ROOT_DIR" || self_abort
