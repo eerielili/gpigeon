@@ -19,6 +19,7 @@ emailre=".\+@.\+\\..\+"
 HAS_MAILSERVER=0 # 0 is the default, it'll use an external smtp server (your gmail
 # account /ISP subscriber mail address for example). Change to 1 if you have a local mail
 # server.
+# TODO: implement the sed trickery to disable and enable portions of perl code
 YOUR_EMAIL=0
 GPG_XLONG='0x0000000000000000' # running 'gpg -k --keyid-format 0xlong yourmail@example.com' will
 # help you there.
