@@ -5,8 +5,8 @@ use warnings;
 use strict;
 use Email::Valid;
 use String::Random;
-use CGI qw(param cookie);
-use CGI::Carp qw(fatalsToBrowser);
+use CGI qw(param);
+#use CGI::Carp qw(fatalsToBrowser);
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 
@@ -39,6 +39,8 @@ sub notif_if_defined{
     }
 }
 
+# execute  'printf "yourpassword" | sha256sum' on a terminal
+# and copy the long string
 my $PASSWD_HASH = q{password_hash_goes_here};
 my $cgi_query_get = CGI->new;
 my $PASSWD = $cgi_query_get->param('password');
@@ -55,7 +57,7 @@ href="/gpigeon.css">';
     my $mymailaddr_password = q{your_mail_address_password_goes_here};
     my $mymail_smtp = q{smtp_domain_goes_here};
     my $mymail_smtport = q{smtp_port_goes_here};
-    my $mymail_gpgid = q{gpgid_goes_here};
+    my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
     my $myescapedmailaddr = escape_arobase($mymailaddr);
     my @text_strings = ('La suppression a r&eacute;ussi !',
     'L&apos;adresse', 
