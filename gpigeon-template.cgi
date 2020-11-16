@@ -1,8 +1,8 @@
 #! /usr/bin/perl -wT
 
-use Digest::SHA qw(sha256_hex);
 use warnings;
 use strict;
+use Digest::SHA qw(sha256_hex);
 use Email::Valid;
 use String::Random;
 use CGI qw(param);
@@ -10,12 +10,53 @@ use CGI qw(param);
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 
+sub print_smtp_method {
+    my $m_addr = shift;
+    my $m_addr_pw = shift;
+    my $m_addr_escaped = shift;
+    my $smtp_serv = shift;
+    my $smtp_port = shift;
+
+    if ($HAS_MAILSERVER eq 0){
+        print 'use Net::SMTP;',"\n",
+        'use Net::SMTPS;',"\n",
+        'my $smtp = Net::SMTPS->new(\''. $smtp_serv  .'\', Port => \''. $smt_port .'\',
+        doSSL => \'ssl\', Debug_SSL => 0);', "\n", 
+        '$smtp->auth(\''. $m_addr .'\', \''. $m_addr_pw  .'\') or die;', "\n",
+        '$smtp->mail(\''. $m_addr .'\') or die "Net::SMTP module has broke:
+        $!.";', "\n",
+        'if ($smtp->to(\''. $m_addr .'\')){', "\n",
+        '    $smtp->data();', "\n",
+        '    $smtp->datasend("To: '. $m_addr_escaped .'\n");', "\n",
+        '    $smtp->datasend("\n");', "\n",
+        '    $smtp->datasend("$enc_msg\n");', "\n",
+        '    $smtp->dataend();', "\n",
+        '}', "\n",
+        'else {', "\n",
+        '    die $smtp->message();', "\n",
+        '}', "\n";
+    }
+    else {
+        undef $m_addr_escaped;
+        print 'use Mail::Sendmail;',
+        '%mail = ( To => \''.$m_addr.'\',' , "\n",
+        '          From => \''.$m_addr.'\',', "\n",
+        '          Subject => \'Gpigeon\' ', "\n",
+        '          Message => "$enc_msg\n" ', "\n",
+        ');', "\n",
+        'sendmail(%mail) or die $Mail::Sendmail::error;', "\n"
+        ;
+
+    }
+
+}
+
 sub escape_arobase {
     my $mailaddress = shift;
     my $arobase = '@';
-    my $escarobase = q{\@};
+    my $espaced_arob = q{\@};
     my $escapedmailaddress = $mailaddress;
-    $escapedmailaddress =~ s/$arobase/$escarobase/;
+    $escapedmailaddress =~ s/$arobase/$espaced_arob/;
     return $escapedmailaddress;
 }
 
@@ -44,6 +85,7 @@ sub notif_if_defined{
 my $PASSWD_HASH = q{password_hash_goes_here};
 my $cgi_query_get = CGI->new;
 my $PASSWD = $cgi_query_get->param('password');
+my $HAS_MAILSERVER = 0;
 
 if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
    
@@ -59,36 +101,36 @@ href="/gpigeon.css">';
     my $mymail_smtport = q{smtp_port_goes_here};
     my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
     my $myescapedmailaddr = escape_arobase($mymailaddr);
-    my @text_strings = ('La suppression a r&eacute;ussi !',
-    'L&apos;adresse', 
-    'est valide !', 
-    'n&apos;est pas valide !',
-    'sed "s/Inconnu', # displays on main page table when supposed sender isn't identified
-    'La longueur du message doit être inférieure à 10000 charactères.',
-    'Formulaire d&apos;envoi de messages GPG', # title for generated links
-    'Rentrez votre message ci-dessous, ',
-    'M&apos;envoyer le message',
-    'Lien g&eacute;n&eacute;r&eacute; pour', #displays if link gen is successful
-    'lien formulaire gpg', # mail subject when clicking a mailto: link in table
-    'Ton lien est', # message when clicking a mailto: link in table
-    'Supprimer', # text on button for deleting links
-    'Mince! Je ne peux pas ouvrir', # message when file opening fails
-    'GPIGEON.CGI: mails GPG pour le non-initié.', # main page title!
-    'Salut et bienvenue.', # a greeting at the top of the main page.
-    'Se d&eacute;connecter', # disconnect button text on main page
-    'Actualiser la page', # refresh button text
-    'G&eacute;n&eacute;rer lien', #link generation button text
-    "Liens g&eacute;n&eacute;r&eacute;s pour <b>$mymailaddr</b>:", # label above links table
-    'Supprimer tous les liens', # delete all links button text
-    'Lien', # first table header, 'Link'
-    'Pour', # second table header, 'For'
-    'Suppression', # third table header, 'Delete'
-    'La suppression a &eacute;chou&eacute;. Voici la cause: '
+    my @text_strings = ('Succesful deletion!',
+    'Address', 
+    'is valid!', 
+    'is not valid !',
+    'Unknown', # displays on main page table when supposed sender isn't identified
+    'Message length must be under 10000 chars.',
+    'One time GPG messaging form', # title for generated links
+    'Type your message below, ',
+    'Send me',
+    'Generated a link for', #displays if link gen is successful
+    'Link to your one time GPG messaging form', # mail subject when clicking a mailto: link in table
+    'Your link is ', # message body when clicking a mailto: link in table
+    'Delete', # text on button for deleting links
+    'Damn! I cannot open ', # message when file opening fails
+    'GPIGEON.CGI: generate one time GPG messaging links !', # main page title!
+    'Hi and welcome.', # a greeting at the top of the main page.
+    'Disconnect', # disconnect button text on main page
+    'Refresh', # refresh button text
+    'Generate link', #link generation button text
+    "Generated links by you, <b>$mymailaddr</b>:", # label above links table
+    'Delete all links', # delete all links button text
+    'Link', # first table header, 'Link'
+    'For', # second table header, 'For'
+    'Deletion', # third table header, 'Delete'
+    'Deletion failed and here is why : '
     );
     my $psswd_formfield = '<input type="hidden" name="password" value="' . $cgi_query_get->param('password') . '">',"\n";
     my $SRV_NAME		         = $ENV{'SERVER_NAME'};	
     my ($notif_de_creation, $notif_mail_valide, $notif_suppression) = undef;
-    my @table_des_liens_crees = ();
+    my @created_links = ();
 
     if (defined $cgi_query_get->param('supprlien')){
         my $pending_deletion = $cgi_query_get->param('supprlien');
@@ -117,11 +159,11 @@ href="/gpigeon.css">';
     }
 
     if (defined $cgi_query_get->param('mail')){
-        my $entered_mail_addr = scalar $cgi_query_get->param('mail');
-        if ( Email::Valid->address($entered_mail_addr) ){
+        my $non_gpguser = scalar $cgi_query_get->param('mail');
+        if ( Email::Valid->address($non_gpguser) ){
             $notif_mail_valide = "<span style='color:green'>$text_strings[1] 
-            $entered_mail_addr $text_strings[2]</span>";
-            my $escaped_entered_mail_addr = escape_arobase($entered_mail_addr);
+            $non_gpguser $text_strings[2]</span>";
+            my $escaped_non_gpguser = escape_arobase($input_mail_addr);
             my $random_mailform_fn_str = String::Random->new;
             my @mailform_fn_str_buffer = ();
             for (1..5){
@@ -135,21 +177,16 @@ href="/gpigeon.css">';
             my $MAILFORM_RELPATH 	 =  "./l/$GENERATED_FORM_FILENAME";
             if (open my $mailform_fh, ">", $MAILFORM_RELPATH){ 
                 print $mailform_fh '#! /usr/bin/perl -wT',"\n\n",
-                ' my $demandeur_du_lien = q{', $entered_mail_addr
+                ' my $non_gpguser = q{', $non_gpguser
             , '};', "\n",
 		        'delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};', "\n",
                 '$ENV{\'PATH\'}="/usr/bin";',
                 'use warnings;', "\n",
                 'use strict;',"\n",
                 'use GPG;',"\n",
-                'use Net::SMTP;',"\n",
-                'use Net::SMTPS;',"\n",
-                'use CGI::Carp qw(fatalsToBrowser);',
-                'use CGI qw(param cookie);', "\n",
+                '#use CGI::Carp qw(fatalsToBrowser);',
+                'use CGI qw(param);', "\n",
 		        'my $cgi_query_get = CGI->new;', "\n",
-                'my $smtp = Net::SMTPS->new(\''. $mymail_smtp  .'\', Port =>
-                \''. $mymail_smtport .'\',
-                doSSL => \'ssl\', Debug_SSL => 0);', "\n", 
                 'my ($msg, $enc_msg, $error_processing_msg)             = undef;', "\n",
                 'if (defined $cgi_query_get->param(\'msg\') and $ENV{\'REQUEST_METHOD\'} eq \'POST\'){',"\n",
                 '   $msg = $cgi_query_get->param(\'msg\');', "\n", 
@@ -160,25 +197,11 @@ href="/gpigeon.css">';
                 '   my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir =>
                 "/usr/share/www-data/.gnupg/");', "\n",
                 '   $enc_msg = $gpg->encrypt("De la part de " .
-                $demandeur_du_lien . ":\n". $msg, \'0x'. $mymail_gpgid  .'\') or die
-                $gpg->error();', "\n",
-                '   $smtp->auth(\''. $mymailaddr .'\', \''.
-                $mymailaddr_password  .'\')
-                or die;', "\n",
-                '   $smtp->mail(\''. $mymailaddr .'\') or die "Net::SMTP module has broke:
-                $!.";', "\n",
-                    'if ($smtp->to(\''. $mymailaddr .'\')){', "\n",
-                        '$smtp->data();', "\n",
-                        '$smtp->datasend("To: '. $myescapedmailaddr .'\n");', "\n",
-                        '$smtp->datasend("\n");', "\n",
-                        '$smtp->datasend("$enc_msg\n");', "\n",
-                        '$smtp->dataend();', "\n",
-                        'unlink "../' . $MAILFORM_RELPATH . '";', "\n",
-                        'print "Location: /gpigeon/merci/index.html\n\n";', "\n", 
-                    '}', "\n",
-                    'else {', "\n",
-                        'die $smtp->message();', "\n",
-                    '}', "\n",
+                $non_gpguser . ":\n". $msg, \'0x'. $mymail_gpgid  .'\') or die
+                $gpg->error();', "\n";
+                print_smtp_method($mymailaddr,$mymailaddr_password,$mymailaddr_escaped,$mymail_smtp,$mymail_smtport);
+                print 'unlink "../' . $MAILFORM_RELPATH . '";', "\n",
+                'print "Location: /gpigeon/merci/index.html\n\n";', "\n", 
                 '}', "\n",
                 'print "Content-type: text/html", "\n\n";', "\n",
                 'print qq{<!DOCTYPE html>', "\n",
@@ -193,7 +216,7 @@ href="/gpigeon.css">';
                 '    </head>', "\n",
                 '    <body>', "\n",
                 '        <p>'. $text_strings[7] . '<b>'
-                .$escaped_entered_mail_addr .'</b> :</p>', "\n",
+                .$escaped_non_gpguser .'</b> :</p>', "\n",
                 '            <form method="POST">', "\n",
                 '                <textarea "', "\n",
                 'wrap="off" cols="50" rows="30" name="msg"
@@ -209,7 +232,7 @@ href="/gpigeon.css">';
             close $mailform_fh;
             chmod(0755,$MAILFORM_RELPATH);
             
-            $notif_de_creation="<span style=\'color:green\'>$text_strings[9] $entered_mail_addr</span><br><a href=\'$MAILFORM_LINK\'>$MAILFORM_LINK</a>";
+            $notif_de_creation="<span style=\'color:green\'>$text_strings[9] $non_gpguser</span><br><a href=\'$MAILFORM_LINK\'>$MAILFORM_LINK</a>";
           }
           else{
 		close $mailform_fh and die "cant open $MAILFORM_RELPATH: $!";
@@ -218,40 +241,38 @@ href="/gpigeon.css">';
         }
         else{
             $notif_mail_valide = "<span style='color:red'>$text_strings[1]
-            $entered_mail_addr $text_strings[3].</span>";
+            $non_gpguser $text_strings[3].</span>";
         }
     }
     
-    # ici on ouvre le dossier /var/www/cgi/cgi-bin/l qui contient les
-    # formulaires de contacts afin de lister son contenu
     opendir my $dir_handle, './l' or die "Can't open ./l: $!";
 
     while (readdir $dir_handle) {
         if ($_ ne '.' and $_ ne '..'){
-            my $fichier_formu_mail = $_;
-            my $demandeur_du_lien = undef;
-            if (open my $fh_formu_mail , '<', "./l/$fichier_formu_mail"){
-                # le demandeur du lien est sur la 4ième ligne, d'où le 1..4
+            my $gpg_form_fn = $_;
+            my $non_gpguser = undef;
+            if (open my $gpg_form_handle , '<', "./l/$gpg_form_fn"){
                 for (1..4){
-                    $demandeur_du_lien = readline $fh_formu_mail;
-                    $demandeur_du_lien =~ s/q\{(.*?)\}//i;
-                    $demandeur_du_lien = $1;
+                    $non_gpguser = readline $gpg_form_handle;
+                    $non_gpguser =~ s/q\{(.*?)\}//i;
+                    $non_gpguser = $1;
                 }
-                close $fh_formu_mail;
+                close $gpg_form_handle;
                 
-                if (not defined $demandeur_du_lien){
-                    $demandeur_du_lien = $text_strings[4];
+                if (not defined $non_gpguser){
+                    $non_gpguser = $text_strings[4];
                 }
                 
-                push @table_des_liens_crees, '<tr>',"\n",
-                "\t<td><a href='/cgi-bin/l/$fichier_formu_mail'>ici</a></td>", "\n",
+                #create links table html
+                push @created_links, '<tr>',"\n",
+                "\t<td><a href='/cgi-bin/l/$gpg_form_fn'>ici</a></td>", "\n",
                 "\t<td><a
-                href='mailto:$demandeur_du_lien?subject=$text_strings[10]",
-                "gpg&body=$text_strings[11] http://$SRV_NAME/cgi-bin/l/$fichier_formu_mail'>$demandeur_du_lien</a></td>", "\n",
+                href='mailto:$non_gpguser?subject=$text_strings[10]",
+                "gpg&body=$text_strings[11] http://$SRV_NAME/cgi-bin/l/$gpg_form_fn'>$non_gpguser</a></td>", "\n",
                 '<td>
                 <form method="POST">
                     <input type="hidden" name="supprlien"
-                    value="'.$fichier_formu_mail.'">
+                    value="'.$gpg_form_fn.'">
                     <input type="hidden" name="password"
                     value="'.$cgi_query_get->param('password').'">
                     <input type="submit" value="'. $text_strings[12] .'">
@@ -261,9 +282,9 @@ href="/gpigeon.css">';
 
             }
             else {
-                close $fh_formu_mail;
+                close $gpg_form_handle;
                 die "Content-type: text/plain", "\n\n", 
-                "$text_strings[13] $fichier_formu_mail: $!";
+                "$text_strings[13] $gpg_form_fn: $!";
             }
             
 
@@ -316,7 +337,7 @@ href="/gpigeon.css">';
                         '<th>'. $text_strings[22]  .'</th>', "\n",
                         '<th>'. $text_strings[23]  .'</th>', "\n",
                     '</tr>', "\n",
-                    "@table_des_liens_crees", "\n",
+                    "@created_links", "\n",
                 '</table>', "\n",
             '</body>', "\n",
     '</html>';
