@@ -10,47 +10,6 @@ use CGI qw(param);
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 
-sub print_smtp_method {
-    my $m_addr = shift;
-    my $m_addr_pw = shift;
-    my $m_addr_escaped = shift;
-    my $smtp_serv = shift;
-    my $smtp_port = shift;
-
-    if ($HAS_MAILSERVER eq 0){
-        print 'use Net::SMTP;',"\n",
-        'use Net::SMTPS;',"\n",
-        'my $smtp = Net::SMTPS->new(\''. $smtp_serv  .'\', Port => \''. $smt_port .'\',
-        doSSL => \'ssl\', Debug_SSL => 0);', "\n", 
-        '$smtp->auth(\''. $m_addr .'\', \''. $m_addr_pw  .'\') or die;', "\n",
-        '$smtp->mail(\''. $m_addr .'\') or die "Net::SMTP module has broke:
-        $!.";', "\n",
-        'if ($smtp->to(\''. $m_addr .'\')){', "\n",
-        '    $smtp->data();', "\n",
-        '    $smtp->datasend("To: '. $m_addr_escaped .'\n");', "\n",
-        '    $smtp->datasend("\n");', "\n",
-        '    $smtp->datasend("$enc_msg\n");', "\n",
-        '    $smtp->dataend();', "\n",
-        '}', "\n",
-        'else {', "\n",
-        '    die $smtp->message();', "\n",
-        '}', "\n";
-    }
-    else {
-        undef $m_addr_escaped;
-        print 'use Mail::Sendmail;',
-        '%mail = ( To => \''.$m_addr.'\',' , "\n",
-        '          From => \''.$m_addr.'\',', "\n",
-        '          Subject => \'Gpigeon\' ', "\n",
-        '          Message => "$enc_msg\n" ', "\n",
-        ');', "\n",
-        'sendmail(%mail) or die $Mail::Sendmail::error;', "\n"
-        ;
-
-    }
-
-}
-
 sub escape_arobase {
     my $mailaddress = shift;
     my $arobase = '@';
@@ -82,6 +41,17 @@ sub notif_if_defined{
 
 # execute  'printf "yourpassword" | sha256sum' on a terminal
 # and copy the long string
+$ENV{'PATH'}='/usr/bin';
+my $HTML_CONTENT_TYPE_HEADER    = 'Content-type: text/html';
+my $HTML_CHARSET = 'UTF-8';
+my $HTML_CSS = '/gpigeon.css';
+my $mymailaddr = q{your_mail_address_goes_here};
+my $mymailaddr_pw = q{your_mail_address_password_goes_here};
+my $mymail_smtp = q{smtp_domain_goes_here};
+my $mymail_smtport = q{smtp_port_goes_here};
+my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
+my $mymailaddr_escaped = escape_arobase($mymailaddr);
+my $msg_form_char_limit = 3000; 
 my $PASSWD_HASH = q{password_hash_goes_here};
 my $cgi_query_get = CGI->new;
 my $PASSWD = $cgi_query_get->param('password');
@@ -89,24 +59,13 @@ my $HAS_MAILSERVER = 0;
 
 if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
    
-    $ENV{'PATH'}='/usr/bin';
-    my $HTML_CONTENT_TYPE_HEADER    = 'Content-type: text/html';
-    my $HTML_CHARSET = '<meta http-equiv="content-type" content="text/html;
-charset=utf-8">',"\n",'<meta charset="UTF-8">',"\n";
-    my $HTML_CSS = '<link rel="stylesheet" type="text/css"
-href="/gpigeon.css">';
-    my $mymailaddr = q{your_mail_address_goes_here};
-    my $mymailaddr_password = q{your_mail_address_password_goes_here};
-    my $mymail_smtp = q{smtp_domain_goes_here};
-    my $mymail_smtport = q{smtp_port_goes_here};
-    my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
-    my $myescapedmailaddr = escape_arobase($mymailaddr);
+
     my @text_strings = ('Succesful deletion!',
     'Address', 
     'is valid!', 
     'is not valid !',
     'Unknown', # displays on main page table when supposed sender isn't identified
-    'Message length must be under 10000 chars.',
+    'Message length must be under$msg_form_char_limit chars.',
     'One time GPG messaging form', # title for generated links
     'Type your message below, ',
     'Send me',
@@ -125,7 +84,9 @@ href="/gpigeon.css">';
     'Link', # first table header, 'Link'
     'For', # second table header, 'For'
     'Deletion', # third table header, 'Delete'
-    'Deletion failed and here is why : '
+    'Deletion failed and here is why : ',
+    'Cannot send message : message length must be under ' .$msg_form_char_limit . ' characters.',
+    'Cannot send message : message is empty. You can type up to ' . $msg_form_char_limit . ' characters.'
     );
     my $psswd_formfield = '<input type="hidden" name="password" value="' . $cgi_query_get->param('password') . '">',"\n";
     my $SRV_NAME		         = $ENV{'SERVER_NAME'};	
@@ -166,10 +127,12 @@ href="/gpigeon.css">';
             my $escaped_non_gpguser = escape_arobase($input_mail_addr);
             my $random_mailform_fn_str = String::Random->new;
             my @mailform_fn_str_buffer = ();
+
             for (1..5){
                 push @mailform_fn_str_buffer,
                      $random_mailform_fn_str->randregex('\w{1,15}[0-9]{1,15}');
             }
+
             my $mailform_fn_str_buffer_nospace = join('',@mailform_fn_str_buffer);
             my $GENERATED_FORM_FILENAME =
             "$mailform_fn_str_buffer_nospace.cgi";
@@ -187,21 +150,56 @@ href="/gpigeon.css">';
                 '#use CGI::Carp qw(fatalsToBrowser);',
                 'use CGI qw(param);', "\n",
 		        'my $cgi_query_get = CGI->new;', "\n",
-                'my ($msg, $enc_msg, $error_processing_msg)             = undef;', "\n",
-                'if (defined $cgi_query_get->param(\'msg\') and $ENV{\'REQUEST_METHOD\'} eq \'POST\'){',"\n",
-                '   $msg = $cgi_query_get->param(\'msg\');', "\n", 
-                '   $msg =~ tr/\r//d;', "\n",
-		'   if (length $msg gt 10000){', "\n",
-		'       $error_processing_msg = q{<span style="color:red"><b>La longueur du message doit être inférieure à 10000 charactères.</b></span>};', "\n",
-		'   }', "\n",
-                '   my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir =>
-                "/usr/share/www-data/.gnupg/");', "\n",
-                '   $enc_msg = $gpg->encrypt("De la part de " .
-                $non_gpguser . ":\n". $msg, \'0x'. $mymail_gpgid  .'\') or die
-                $gpg->error();', "\n";
-                print_smtp_method($mymailaddr,$mymailaddr_password,$mymailaddr_escaped,$mymail_smtp,$mymail_smtport);
-                print 'unlink "../' . $MAILFORM_RELPATH . '";', "\n",
-                'print "Location: /gpigeon/merci/index.html\n\n";', "\n", 
+                'my ($msg_form, $enc_msg, $error_processing_msg,$msg_form_char_limit)             = undef;', "\n",
+                '$msg_form_char_limit = '. $msg_form_char_limit . ' ;', "\n",
+                '$msg_form = $cgi_query_get->param(\'msg\');', "\n",
+                'my $length_msg_form = length $msg_form;', "\n",
+                'if ($length_msg_form > $msg_form_char_limit){', "\n",
+                '    $error_processing_msg = q{<span style="color:red"><b>'. $text_strings[25] .'.</b></span>};', "\n",
+                '} elsif ( $length_msg_form eq 0 ){', "\n",
+                '    $error_processing_msg = q{<span style="color:red"><b>'. $text_string[26] . '.</b></span>};', "\n",
+                '} else {', "\n",
+                    'if (defined $cgi_query_get->param(\'msg\') and $ENV{\'REQUEST_METHOD\'} eq \'POST\'){',"\n",
+                    '   $msg_form =~ tr/\r//d;', "\n",
+                    '   my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir =>
+                    "/usr/share/www-data/.gnupg/");', "\n",
+                    '   $enc_msg = $gpg->encrypt("De la part de " .
+                    $non_gpguser . ":\n". $msg, \'0x'. $mymail_gpgid  .'\') or die
+                    $gpg->error();', "\n";
+                    if ($HAS_MAILSERVER eq 0){
+                        print 'use Net::SMTP;',"\n",
+                        'use Net::SMTPS;',"\n",
+                        'my $smtp = Net::SMTPS->new(\''. $mymail_smtp  .'\', Port => \''. $mymail_smtport .'\',
+                        doSSL => \'ssl\', Debug_SSL => 0);', "\n", 
+                        '$smtp->auth(\''. $mymailaddr .'\', \''. $mymailaddr_pw  .'\') or die;', "\n",
+                        '$smtp->mail(\''. $mymailaddr .'\') or die "Net::SMTP module has broke:
+                        $!.";', "\n",
+                        'if ($smtp->to(\''. $mymailaddr .'\')){', "\n",
+                        '    $smtp->data();', "\n",
+                        '    $smtp->datasend("To: '. $mymailaddr_escaped .'\n");', "\n",
+                        '    $smtp->datasend("\n");', "\n",
+                        '    $smtp->datasend("$enc_msg\n");', "\n",
+                        '    $smtp->dataend();', "\n",
+                        '}', "\n",
+                        'else {', "\n",
+                        '    die $smtp->message();', "\n",
+                        '}', "\n";
+                    }
+                    else {
+                        undef $mymailaddr_escaped;
+                        print 'use Mail::Sendmail;',
+                        '%mail = ( To => \''.$mymailaddr.'\',' , "\n",
+                        '          From => \''.$mymailaddr.'\',', "\n",
+                        '          Subject => \'Gpigeon\' ', "\n",
+                        '          Message => "$enc_msg\n" ', "\n",
+                        ');', "\n",
+                        'sendmail(%mail) or die $Mail::Sendmail::error;', "\n"
+                        ;
+
+                    }
+                    print 'unlink "../' . $MAILFORM_RELPATH . '";', "\n",
+                    'print "Location: /gpigeon/merci/index.html\n\n";', "\n", 
+                    '}', "\n",
                 '}', "\n",
                 'print "Content-type: text/html", "\n\n";', "\n",
                 'print qq{<!DOCTYPE html>', "\n",
@@ -209,8 +207,8 @@ href="/gpigeon.css">';
                 '    <head>', "\n",
                 '        <link rel="icon" sizes="48x48" ',"\n",
                 'type="image/ico" href="/gpigeon/favicon.ico">', "\n",
-                $HTML_CSS, "\n",
-                $HTML_CHARSET, "\n",
+                '<link rel="stylesheet" type="text/css" href="'. $HTML_CSS .'">';
+                '<meta http-equiv="content-type" content="text/html;charset='. $HTML_CHARSET .'">',"\n",'<meta charset="'. $HTML_CHARSET  .'">',"\n";
 		'<title>Formulaire ', "\n",
                 'd\'envoi de message GPG</title>',"\n",
                 '    </head>', "\n",
@@ -219,12 +217,10 @@ href="/gpigeon.css">';
                 .$escaped_non_gpguser .'</b> :</p>', "\n",
                 '            <form method="POST">', "\n",
                 '                <textarea "', "\n",
-                'wrap="off" cols="50" rows="30" name="msg"
-                required></textarea>', "\n",
-		'<br>', "\n",
-		'$error_processing_msg', "\n",
-		'<br>', "\n",
-                '<input type="submit"
+                'wrap="off" cols="50" rows="30" name="msg"></textarea>', "\n",
+                '<br>};', "\n",
+                'if(defined $error_processing_msg){printf $error_processing_msg;}', "\n",
+                'printf qq{<br><input type="submit"
                 value="'. $text_strings[8] .'">', "\n",
                 '            </form>', "\n",
                 '    </body>', "\n",
@@ -298,8 +294,8 @@ href="/gpigeon.css">';
             '<head>', "\n",
                 '<link rel="icon" sizes="48x48" ',"\n",
                 'type="image/ico" href="/gpigeon/favicon.ico">', "\n",
-                $HTML_CSS, "\n",
-                $HTML_CHARSET, "\n",
+                '<link rel="stylesheet" type="text/css" href="'. $HTML_CSS .'">';
+                '<meta http-equiv="content-type" content="text/html;charset='. $HTML_CHARSET .'">',"\n",'<meta charset="'. $HTML_CHARSET  .'">',"\n";
                 '<title>'. $text_strings[14] .'</title>', "\n",
             '</head>', "\n",
             '<body>', "\n",
@@ -317,7 +313,7 @@ href="/gpigeon.css">';
                 '<form method="POST">', "\n",
                     $psswd_formfield,
                     'Mail de la personne:<br>', "\n",
-                    '<input tabindex="1" type="text" name="mail" maxlength="120">', "\n",
+                    '<input tabindex="1" type="text" name="mail">', "\n",
                     '<input tabindex="2" type="submit" value="'.
                     $text_strings[18] .'">', "\n",
                 '</form>', "\n",
