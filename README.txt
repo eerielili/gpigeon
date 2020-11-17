@@ -7,6 +7,15 @@ web link.
 Feels of déjàvu ? I was inspired by https://hawkpost.co but wasn't really
 interested in the multi-user perspective and managing a database.
 
+Features
+========
+
+    * Single user: no database required.
+    * One-time GPG form: after sending the encrypted message, the generated form
+    self-destructs.
+    * A table of the links generated is visible when you connect so you can
+    keep track. You can also delete link individually or all at once.
+
 Dependencies
 ============
 
@@ -36,8 +45,8 @@ Mail::Sendmail then comment and uncomment some lines in <gpigeon-template.cgi>.
 Installation
 ============
 
-I'm currently making a install script for it but frankly if you look around in
-the perl script source code you should figure things out quickly (hint: look for variables
+I'm currently making a install script but frankly if you look around in
+the <gpigeon-template.cgi> source code you should figure things out quickly (hint: look for variables
 values ending in 'goes_here').
 
 ##WIP##
