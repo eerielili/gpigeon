@@ -122,7 +122,7 @@ setup_gpigeon() {
     sed "s/gpgid_goes_here/$gpgidlong/g" -i $SCRIPT
     if [ $HAS_MAILSERVER -eq 1 ]; then
         sed "s/HAS_MAILSERVER=0/HAS_MAILSERVER=1/g" $SCRIPT
-        cpamn Mail::Sendmail
+        cpamn Mail::Sendmail || ( printf "\nInstallation of Mail::Sendmail failed\n" && self_abort )
     fi    
 
     printf "\nCreating static files directory at $ROOT_DIR"
