@@ -27,12 +27,6 @@ th,tr,td{
     border:1px solid black;
 }
   
-#crypto_secu{
-	  border: 1px solid black;
-	  margin:5%;
-	  float:bottom;
-}
-
 body{
       font-family:sans-serif;
       width:80%;
