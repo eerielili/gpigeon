@@ -84,7 +84,7 @@ my @text_strings = ('Succesfull deletion!',
 );
 my $cgi_query_get = CGI->new;
 my $PASSWD = $cgi_query_get->param('password');
-my $psswd_formfield = '<input type="hidden" name="password" value="' . $cgi_query_get->param('password') . '">',"\n";
+my $psswd_formfield = '<input type="hidden" name="password" value="' . $cgi_query_get->param('password') . '">';
 my ($notif_de_creation, $notif_mail_valide, $notif_suppression) = undef;
 my @created_links = ();
 
