@@ -161,10 +161,10 @@ if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
                 if ($HAS_MAILSERVER){
                     undef $mymailaddr_escaped;
                     print $gpg_form_fh "\n",
-                '        use Mail::Sendmail;',
-                '        %mail = ( To => \''.$mymailaddr.'\',' , "\n",
-                '                  From => \''.$mymailaddr.'\',', "\n",
-                '                  Subject => \'Gpigeon\' ', "\n",
+                '        use Mail::Sendmail;', "\n",
+                '        my %mail = ( To => \''.$mymailaddr.'\', ', "\n",
+                '                  From => \''.$mymailaddr.'\',  ', "\n",
+                '                  Subject => \'Gpigeon\', ', "\n",
                 '                  Message => "$enc_msg\n" ', "\n",
                 '        );', "\n",
                 '        sendmail(%mail) or die $Mail::Sendmail::error;', "\n";
