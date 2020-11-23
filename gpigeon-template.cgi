@@ -54,7 +54,7 @@ my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
 my $PASSWD_HASH = q{password_hash_goes_here};
 my $mymailaddr_escaped = escape_arobase($mymailaddr);
 my $msg_form_char_limit = 3000; 
-my @text_strings = ('Succesfull deletion!',
+my @text_strings = ('Successful removal !',
     'Address', 
     'is valid!', 
     'is not valid !',
