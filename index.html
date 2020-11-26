@@ -1,29 +1,16 @@
 <!DOCTYPE html>
 <html>
-<head>
-
-	<link rel="icon" type="image/x-icon" href="/gpigeon/gpigeon.ico">
- <title>Auth2gpigeon</title>
- <style>
-  html{background-color:skyblue;}
-  #crypto_secu{
-	  border: 1px solid black;
-	  margin:5%;
-	  float:left;
-  }
- </style>
-<meta charset="utf-8">
-</head>
-<body>
-<form action="/cgi-bin/gpigeon.cgi" method="POST">
-  <h1 style="text-align:center">📧 Gpigeon 🕊️</h1>
-  🔒 Mot de passe : <input type="password" name="password">
-  <input type="submit" value="S'authentifier">
- </form>
-  
- <a href="https://xkcd.com/538/"><img id="crypto_secu" src="/images/crypto_secu.png" 
-  title="XKCD fait redescendre les nerds du chiffrement sur terre" 
-  alt="bande dessinée de XKCD faisant redescendre les nerds du chiffrement sur terre"></a>
-</body>
-
+    <head>
+        <title>Gpigeon login page</title>
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
+        <link rel="stylesheet" type="text/css" href="/gpigeon.css">
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1 style="text-align:center">📧 Gpigeon 🕊️</h1>
+        <form action="/cgi-bin/gpigeon.cgi" method="POST">
+          🔒 Password : <input type="password" name="password">
+          <input type="submit" value="S'authentifier">
+        </form>
+    </body>
 </html>
