@@ -2,7 +2,7 @@
 
 use warnings;
 use strict;
-use Digest::SHA qw(sha256_hex);
+use Crypt::Argon2 qw(argon2id_verify);
 use Email::Valid;
 use String::Random;
 use CGI qw(param);
@@ -35,6 +35,8 @@ sub notif_if_defined{
     if (defined $notif){
         return $notif;
     }
+    else{
+        return '<!-- undef -->';
 }
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
@@ -54,51 +56,49 @@ my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
 my $PASSWD_HASH = q{password_hash_goes_here};
 my $mymailaddr_escaped = escape_arobase($mymailaddr);
 my $msg_form_char_limit = 3000; 
-my @text_strings = ('Successful removal !',
-    'Address', 
-    'is valid!', 
-    'is not valid !',
-    'Unknown', # displays on main page table when supposed sender isn't identified
-    'Message length must be under$msg_form_char_limit chars.',
-    'One time GPG messaging form', # title for generated links
-    'Type your message below, ',
-    'Send to me',
-    'Generated a link for', #displays if link gen is successful
-    'Link to your one time GPG messaging form', # mail subject when clicking a mailto: link in table
-    'Your link is ', # message body when clicking a mailto: link in table
-    'Delete', # text on button for deleting links
-    'Damn! I cannot open ', # message when file opening fails
-    'GPIGEON.CGI: generate one time GPG messaging links !', # main page title!
-    'Hi and welcome.', # a greeting at the top of the main page.
-    'Disconnect', # disconnect button text on main page
-    'Refresh', # refresh button text
-    'Generate link', #link generation button text
-    "Generated links by you, <b>$mymailaddr</b>:", # label above links table
-    'Delete all links', # delete all links button text
-    'Link', # first table header, 'Link'
-    'For', # second table header, 'For'
-    'Deletion', # third table header, 'Delete'
-    'Deletion failed and here is why : ',
-    'Cannot send message : message length must be under ' .$msg_form_char_limit . ' characters.',
-    'Cannot send message : message is empty. You can type up to ' . $msg_form_char_limit . ' characters.'
-);
+my %text_strings = (link_del_ok => 'Successful removal !',
+    addr => 'Address', 
+    addr_ok => 'is valid!', 
+    addr_nok => 'is not valid !',
+    addr_unknown => 'Unknown',
+    link_web_title => 'One time GPG messaging form',
+    link_legend_textarea =>'Type your message below :',
+    link_send_btn => 'Send',
+    link_generated_ok => 'Generated a link for',
+    mailto_body => 'Your link is ',
+    mailto_subject => 'Link to your one time GPG messaging form',
+    delete_link_btn_text => 'Delete',
+    delete_links_btn_text => 'Delete all links',
+    create_link_btn => 'Generate link', 
+    web_title => 'GPIGEON.CGI: generate one time GPG messaging links !', 
+    web_greet_msg => 'Hi and welcome.', 
+    disconnect_btn_text => 'Disconnect',
+    refresh_btn_text => 'Refresh',
+    theader_link => 'Link', 
+    theader_for => 'For', 
+    theader_deletion => 'Deletion', 
+    link_del_failed => 'Deletion failed and here is why : ',
+    msg_too_long => 'Cannot send message : message length must be under ' .$msg_form_char_limit . ' characters.',
+    msg_empty => 'Cannot send message : message is empty. You can type up to ' . $msg_form_char_limit . ' characters.',
+    notif_login_failure => 'Cannot login. Check if your username and password match.'
+ );
 my $cgi_query_get = CGI->new;
 my $PASSWD = $cgi_query_get->param('password');
-my $psswd_formfield = '<input type="hidden" name="password" value="' . $cgi_query_get->param('password') . '">';
 my ($notif_de_creation, $notif_mail_valide, $notif_suppression) = undef;
 my @created_links = ();
 
 
-if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
+if (argon2id_verify($PASSWD,$PASSWD_HASH)){
 
+        my $psswd_formfield = '<input type="hidden" name="password" value="' . $cgi_query_get->param('password') . '">';
     if (defined $cgi_query_get->param('supprlien')){
         my $pending_deletion = $cgi_query_get->param('supprlien');
         my $gpg_form_fn = "./l/$pending_deletion";
         if (unlink untaint_cgi_filename($gpg_form_fn)){ 
-            $notif_suppression='<span style="color:green">'.$text_strings[0].'</span>';
+            $notif_suppression=qq{<span style="color:green">$text_strings{link_del_ok}</span>};
         }
         else {
-            $notif_suppression='<span style="color:red">'. $text_strings[24] . $gpg_form_fn.':'. $! .'</span>';
+            $notif_suppression=qq{<span style="color:red">$text_strings{link_del_failed} $gpg_form_fn : $!</span>};
         }
     }
 
@@ -109,7 +109,7 @@ if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
             if ($_ ne '.' and $_ ne '..'){
                 my $gpg_form_fn = "./l/$_";
                 unlink untaint_cgi_filename($gpg_form_fn) or die "$!";
-                $notif_suppression='<span style="color:green">'. $text_strings[0] .'</span>';
+                $notif_suppression=qq{<span style="color:green">$text_strings{link_del_ok}</span>};
             }
         }
         closedir $link_dir_handle;
@@ -119,7 +119,7 @@ if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
         my $non_gpguser = scalar $cgi_query_get->param('mail');
 
         if ( Email::Valid->address($non_gpguser) ){
-            $notif_mail_valide = '<span style="color:green">'. $text_strings[1] . ' '. $non_gpguser.' '. $text_strings[2] . '</span>';
+            $notif_mail_valide = qq{<span style="color:green">$text_strings{addr} $non_gpguser $text_strings{addr_ok}</span>};
             my $escaped_non_gpguser = escape_arobase($non_gpguser);
             my $random_mailform_fn_str = String::Random->new;
             my @mailform_fn_str_buffer = ();
@@ -150,9 +150,9 @@ if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
                 'my $length_msg_form = length $msg_form;', "\n",
                
                 'if (defined $length_msg_form and $length_msg_form > $msg_form_char_limit){', "\n",
-                '    $error_processing_msg = q{<span style="color:red"><b>'. $text_strings[25] .'.</b></span>};', "\n",
+                '    $error_processing_msg = q{<span style="color:red"><b>'. $text_strings{msg_too_long} .'.</b></span>};', "\n",
                 '} elsif (defined $length_msg_form and $length_msg_form eq 0 ){', "\n",
-                '    $error_processing_msg = q{<span style="color:red"><b>'. $text_strings[26] . '.</b></span>};', "\n",
+                '    $error_processing_msg = q{<span style="color:red"><b>'.  $text_strings{msg_empty} . '.</b></span>};', "\n",
                 '} else {', "\n",
                 '    if (defined $length_msg_form and $ENV{\'REQUEST_METHOD\'} eq \'POST\'){',"\n",
                 '       $msg_form =~ tr/\r//d;', "\n",
@@ -208,20 +208,19 @@ if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
                 '};', "\n",
                 'if (defined $error_processing_msg){printf $error_processing_msg;}', "\n",
                 'printf qq{     <br>
-                                <input type="submit" value="'. $text_strings[8] .'">', "\n",
+                                <input type="submit" value="'. $text_strings{link_send_btn} .'">', "\n",
                 '            </form>', "\n",
                 '    </body>', "\n",
                 '</html> };';
             close $gpg_form_fh;
             chmod(0755,$MAILFORM_RELPATH);
-            $notif_de_creation='<span style="color:green">'. $text_strings[9] . $non_gpguser .'</span><br><a href="'. $MAILFORM_LINK .'">'. $MAILFORM_LINK .'</a>';
-          }
+            $notif_de_creation=qq{<span style="color:green">$text_strings{link_generated_ok} $non_gpguser: </span><br><a href="$MAILFORM_LINK">$MAILFORM_LINK</a>};          }
           else{
 		      close $gpg_form_fh and die "Can't open $MAILFORM_RELPATH: $!";
           }
         }
         else{
-            $notif_mail_valide = "<span style='color:red'>$text_strings[1] $non_gpguser $text_strings[3].</span>";
+            $notif_mail_valide = qq{<span style="color:red">$text_strings{addr} $non_gpguser $text_strings{addr_nok}.</span>};
         }
     }
     
@@ -246,75 +245,75 @@ if ( sha256_hex($PASSWD) eq $PASSWD_HASH and $ENV{'REQUEST_METHOD'} eq 'POST'){
                 
                 #create links table html
                 push @created_links,
-                '<tr>
-                    <td><a href="/cgi-bin/l/'. $gpg_form_fn .'">ici</a></td>
-                    <td><a href="mailto:'. $non_gpguser .'?subject='. $text_strings[10] .'&body='. $text_strings[11] .'http://$SRV_NAME/cgi-bin/l/'. $gpg_form_fn .'">'.$non_gpguser.'</a></td>
+                qq{<tr>
+                    <td><a href="/cgi-bin/l/$gpg_form_fn">ici</a></td>
+                    <td><a href="mailto:$non_gpguser?subject=$text_strings{mailto_subject}&body=$text_strings{mailto_body} http://$SRV_NAME/cgi-bin/l/$gpg_form_fn">$non_gpguser</a></td>
                     <td>
                         <form method="POST">
-                            <input type="hidden" name="supprlien" value="'. $gpg_form_fn .'">
-                            <input type="hidden" name="password" value="'. $cgi_query_get->param('password') .'">
-                            <input type="submit" value="'. $text_strings[12] .'">
+                            <input type="hidden" name="supprlien" value="$gpg_form_fn">
+                            <input type="hidden" name="password" value="$cgi_query_get->param('password')">
+                            <input type="submit" value="$text_strings{delete_link_btn}">
                         </form>
                     </td>
-                </tr>';
+                </tr>};
 
             }
             else {
                 close $gpg_form_handle;
-                die 'Content-type: text/plain', "\n\n", "$text_strings[13] $gpg_form_fn: $!";
+                die 'Content-type: text/plain', "\n\n", "Error: Can't open $gpg_form_fn: $!";
             }
         }
     }
     closedir $link_dir_handle;
 
     print $HTML_CONTENT_TYPE_HEADER,"\n\n",
-    '<!DOCTYPE html>
+    qq{<!DOCTYPE html>
         <html> 
             <head> 
                 <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
-                <link rel="stylesheet" type="text/css" href="'. $HTML_CSS .'">
-                <meta http-equiv="content-type" content="text/html;charset='. $HTML_CHARSET .'">',"\n",'<meta charset="'. $HTML_CHARSET  .'">
-                <title>'. $text_strings[14] .'</title>
+                <link rel="stylesheet" type="text/css" href="$HTML_CSS">
+                <meta http-equiv="content-type" content="text/html;charset=$HTML_CHARSET">
+                <meta charset="$HTML_CHARSET">
+                <title>$text_strings{web_title}</title>
             </head>
             <body>
-                <p>'. $text_strings[15] .'</p>
+                <p>$text_strings{web_greet_msg}</p>
                 <form method="POST">
                     <input type="hidden" name="password" value="0">
-                    <input type="submit" value="'. $text_strings[16] .'">
+                    <input type="submit" value="$text_strings{disconnect_btn_text}">
                 </form>
-                <form method="POST">',
-                $psswd_formfield,
-                   '<input type="submit" value="'. $text_strings[17]  .'">
+                <form method="POST">
+                $psswd_formfield
+                   <input type="submit" value="$text_strings{refresh_btn_text}">
                 </form>
                 <hr>
                 <br>
-                <form method="POST">', 
-                    $psswd_formfield,
-                    'Mail de la personne:<br>
+                <form method="POST">
+                    $psswd_formfield
+                    Mail de la personne:<br>
                     <input tabindex="1" type="text" name="mail">
-                    <input tabindex="2" type="submit" value="'. $text_strings[18] .'">
-                </form>';
-                print notif_if_defined($notif_mail_valide);
-                print '<br>';
-                print notif_if_defined($notif_de_creation);
-                print '<hr>
-                <p>'. $text_strings[19]  .'</p>',
-                '<form method="POST">',
-                    $psswd_formfield,
-                    '<input type="hidden" name="supprtout">
-                     <input type="submit" value="'. $text_strings[20] .'">
-                </form>', 
+                    <input tabindex="2" type="submit" value="$text_strings{create_link_btn}">
+                </form>},
+                notif_if_defined($notif_mail_valide),
+                '<br>'
+                notif_if_defined($notif_de_creation),
+                qq{<hr>
+                <form method="POST">
+                    $psswd_formfield
+                    <input type="hidden" name="supprtout">
+                     <input type="submit" value="$text_strings{delete_links_btn_text}">
+                </form>},
                 notif_if_defined($notif_suppression),
-                '<table>
+                qq{<table>
                     <tr>
-                        <th>'. $text_strings[21]  .'</th>',
-                        '<th>'. $text_strings[22]  .'</th>', 
-                        '<th>'. $text_strings[23]  .'</th>', 
-                    '</tr>',
-                    "@created_links",
-                '</table>
+                        <th>$text_strings{theader_link}</th>
+                        <th>$text_strings{theader_for}</th>
+                        <th>$text_strings{theader_deletion}</th>
+                    </tr>
+                    @created_links
+                </table>
             </body>
-        </html>';
+        </html>};
 }
 else {
     print 'Location: /index.html', "\n\n";
