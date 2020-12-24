@@ -48,5 +48,3 @@ Installation
 I'm currently making a install script but frankly if you look around in
 the <gpigeon-template.cgi> source code you should figure things out quickly (hint: look for variables
 values ending in 'goes_here').
-
-##WIP##
