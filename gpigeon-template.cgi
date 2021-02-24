@@ -40,8 +40,6 @@ sub notif_if_defined{
 }
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
-# execute  'printf "yourpassword" | sha256sum' on a terminal
-# and copy the long string
 $ENV{'PATH'} = '/usr/bin';
 my $HAS_MAILSERVER = 0;
 my $SRV_NAME = $ENV{'SERVER_NAME'};	
@@ -53,7 +51,7 @@ my $mymailaddr_pw = q{your_mail_address_password_goes_here};
 my $mymail_smtp = q{smtp_domain_goes_here};
 my $mymail_smtport = q{smtp_port_goes_here};
 my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
-my $PASSWD_HASH = q{password_hash_goes_here};
+my $PASSWD_HASH = q{password_hash_goes_here}; #argon2id hash please
 my $mymailaddr_escaped = escape_arobase($mymailaddr);
 my $msg_form_char_limit = 3000; 
 my %text_strings = (link_del_ok => 'Successful removal !',
@@ -126,7 +124,7 @@ if (argon2id_verify($PASSWD,$PASSWD_HASH)){
 
             for (1..5){
                 push @mailform_fn_str_buffer,
-                     $random_mailform_fn_str->randregex('\w{1,15}[0-9]{1,15}');
+                     $random_mailform_fn_str->randregex('\w{64}');
             }
 
             my $mailform_fn_str_buffer_nospace = join('',@mailform_fn_str_buffer);
