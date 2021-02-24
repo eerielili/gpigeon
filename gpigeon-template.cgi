@@ -37,6 +37,7 @@ sub notif_if_defined{
     }
     else{
         return '<!-- undef -->';
+    }
 }
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
