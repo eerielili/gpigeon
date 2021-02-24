@@ -232,7 +232,7 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
                 close $gpg_form_handle;
                 
                 if (not defined $non_gpguser){
-                    $non_gpguser = $text_strings[4];
+                    $non_gpguser = $text_strings{unknown};
                 }
                 
                 #create links table html
@@ -244,7 +244,7 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
                         <form method="POST">
                             <input type="hidden" name="supprlien" value="$gpg_form_fn">
                             <input type="hidden" name="password" value="$cgi_query_get->param('password')">
-                            <input type="submit" value="$text_strings{delete_link_btn}">
+                            <input type="submit" value="$text_strings{delete_link_btn_text}">
                         </form>
                     </td>
                 </tr>};
