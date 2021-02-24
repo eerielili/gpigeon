@@ -119,16 +119,10 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
         if ( Email::Valid->address($non_gpguser) ){
             $notif_mail_valide = qq{<span style="color:green">$text_strings{addr} $non_gpguser $text_strings{addr_ok}</span>};
             my $escaped_non_gpguser = escape_arobase($non_gpguser);
-            my $random_mailform_fn_str = String::Random->new;
-            my @mailform_fn_str_buffer = ();
-
-            for (1..5){
-                push @mailform_fn_str_buffer,
-                     $random_mailform_fn_str->randregex('\w{64}');
-            }
-
-            my $mailform_fn_str_buffer_nospace = join('',@mailform_fn_str_buffer);
-            my $GENERATED_FORM_FILENAME = "$mailform_fn_str_buffer_nospace.cgi";
+            my $str_rand_obj = String::Random->new;
+            my $random_fn = $str_rand_obj->randregex('\w{64}');
+            
+            my $GENERATED_FORM_FILENAME = "$random_fn.cgi";
             my $MAILFORM_LINK   	 = "http://$SRV_NAME/cgi-bin/l/$GENERATED_FORM_FILENAME";
             my $MAILFORM_RELPATH 	 =  "./l/$GENERATED_FORM_FILENAME";
             if (open my $gpg_form_fh, ">", $MAILFORM_RELPATH){ 
