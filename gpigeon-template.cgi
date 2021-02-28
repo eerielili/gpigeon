@@ -56,6 +56,7 @@ my %text_strings = (link_del_ok => 'Successful removal !',
     web_greet_msg => 'Hi and welcome.', 
     disconnect_btn_text => 'Disconnect',
     refresh_btn_text => 'Refresh',
+    type_msg_below => 'Type your message below',
     theader_link => 'Link', 
     theader_for => 'For', 
     theader_deletion => 'Deletion', 
@@ -112,11 +113,13 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
             open my $out, '>', $LINK_FILENAME or die "Can't write to link file: $!";
             while( <$in> ) {
                 s/{link_user}/{$link_asker}/g;
-                s/{link_filename}/{$LINK_FILENAME}/g;
+                s/{link_filename}/{$GENERATED_FORM_FILENAME}/g;
                 s/{msg_too_long}/$text_strings{msg_too_long}/g;
                 s/{msg_empty}/$text_strings{msg_empty}/g;
                 s/{msg_form_char_limit}/$msg_form_char_limit/g;
+                s/{link_web_title}/$text_strings{link_web_title}/g;
                 s/{link_send_btn}/$text_strings{link_send_btn}/g;
+                s/{type_msg_below}/$text_strings{type_msg_below}/g;
                 print $out $_;
             }
             close $in or die;
