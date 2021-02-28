@@ -45,6 +45,5 @@ Mail::Sendmail then comment and uncomment some lines in <gpigeon-template.cgi>.
 Installation
 ============
 
-I'm currently making a install script but frankly if you look around in
-the <gpigeon-template.cgi> source code you should figure things out quickly (hint: look for variables
-values ending in 'goes_here').
+Look in the [gpigeon-template.cgi](https://git.les-miquelots.net/gpigeon/plain/gpigeon-template.cgi) source code you should figure things out quickly.
+Hint: look for variables values ending in 'goes_here'.
