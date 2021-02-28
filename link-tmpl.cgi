@@ -86,10 +86,10 @@ print qq{<!DOCTYPE html>
        <link rel="stylesheet" type="text/css" href="/styles.css">
        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
        <meta charset="UTF-8">
-       <title>Formulaire d'envoi de message GPG</title>
+       <title>{link_web_title}</title>
     </head>
     <body>
-        <p>type_msg_below:</p>
+        <p>{type_msg_below}:</p>
             <form method="POST">
                 <textarea wrap="off" cols="50" rows="30" name="msg"></textarea><br>
 };
