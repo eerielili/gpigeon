@@ -6,7 +6,18 @@ use Crypt::Argon2 qw(argon2id_verify);
 use Email::Valid;
 use String::Random;
 use CGI qw(param);
+#use CGI::Session;
 use CGI::Carp qw(fatalsToBrowser);
+
+sub notif_if_defined{
+    my $notif = shift;
+    if (defined $notif){
+        return $notif;
+    }
+    else{
+        return '<!-- undef -->';
+    }
+}
 
 sub untaint_cgi_filename {
     my $filename = shift;
@@ -21,59 +32,50 @@ sub untaint_cgi_filename {
     return $filename;
 }
 
-sub notif_if_defined{
-    my $notif = shift;
-    if (defined $notif){
-        return $notif;
-    }
-    else{
-        return '<!-- undef -->';
-    }
-}
-
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 $ENV{'PATH'} = '/usr/bin';
-my $HOSTNAME = $ENV{'SERVER_NAME'};	
+my $cgi_query_get = CGI->new;
+my @created_links = ();
+my ($linkgen_notif, $mailisok_notif, $deletion_notif) = undef;
 my $LINK_TEMPLATE_PATH='/usr/share/webapps/gpigeon/link-template.pl'; # this is the file where the SMTP and mail address values goes
+my $HOSTNAME = $ENV{'SERVER_NAME'};	
 my $msg_form_char_limit = 3000;
 my $PASSWD_HASH = q{password_hash_goes_here}; #argon2id hash format
-my %text_strings = (link_del_ok => 'Successful removal !',
+my $PASSWD = $cgi_query_get->param('password');
+
+my %text_strings = (
     addr => 'Address', 
-    here => 'here',
     addr_ok => 'is valid!', 
     addr_nok => 'is not valid !',
     addr_unknown => 'Unknown',
+    create_link_btn => 'Generate link', 
+    delete_link_btn_text => 'Delete',
+    delete_links_btn_text => 'Delete all links',
+    disconnect_btn_text => 'Disconnect',
+    here => 'here',
     link_web_title => 'One time GPG messaging form',
+    login => 'Login',
+    link_del_ok => 'Successful removal !',
     link_legend_textarea =>'Type your message below :',
     link_send_btn => 'Send',
     link_generated_ok => 'Generated a link for',
+    link_del_failed => 'Deletion failed and here is why : ',
+    notif_login_failure => 'Cannot login. Check if your username and password match.'
     mailto_body => 'Your link is ',
     mailto_subject => 'Link to your one time GPG messaging form',
-    delete_link_btn_text => 'Delete',
-    delete_links_btn_text => 'Delete all links',
-    create_link_btn => 'Generate link', 
-    web_title => 'GPIGEON.CGI: generate one time GPG messaging links !', 
-    web_greet_msg => 'Hi and welcome.', 
-    disconnect_btn_text => 'Disconnect',
+    msg_too_long => 'Cannot send message : message length must be under ' .$msg_form_char_limit . ' characters.',
+    msg_empty => 'Cannot send message : message is empty. You can type up to ' . $msg_form_char_limit . ' characters.',
     refresh_btn_text => 'Refresh',
     type_msg_below => 'Type your message below',
     theader_link => 'Link', 
     theader_for => 'For', 
     theader_deletion => 'Deletion', 
-    link_del_failed => 'Deletion failed and here is why : ',
-    msg_too_long => 'Cannot send message : message length must be under ' .$msg_form_char_limit . ' characters.',
-    msg_empty => 'Cannot send message : message is empty. You can type up to ' . $msg_form_char_limit . ' characters.',
-    notif_login_failure => 'Cannot login. Check if your username and password match.'
+    web_title => 'GPIGEON.CGI: generate one time GPG messaging links !', 
+    web_greet_msg => 'Hi and welcome.', 
 );
-my $cgi_query_get = CGI->new;
-my $PASSWD = $cgi_query_get->param('password');
-my ($linkgen_notif, $mailisok_notif, $deletion_notif) = undef;
-my @created_links = ();
-
 
 if (argon2id_verify($PASSWD_HASH,$PASSWD)){
-
-    my $hidden_pwfield = '<input type="hidden" name="password" value="' . $PASSWD . '">';
+    my $hidden_pwfield = qq{<input type="hidden" name="password" value="$PASSWD">};
     if (defined $cgi_query_get->param('supprlien')){
         my $pending_deletion = $cgi_query_get->param('supprlien');
         my $linkfile_fn = "./l/$pending_deletion";
@@ -107,10 +109,10 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
             my $random_fn = $str_rand_obj->randregex('\w{64}');
             my $GENERATED_FORM_FILENAME = "$random_fn.cgi";
             my $HREF_LINK   	 = "https://$HOSTNAME/cgi-bin/l/$GENERATED_FORM_FILENAME";
-            my $LINK_FILENAME 	 =  "./l/$GENERATED_FORM_FILENAME";
+            my $LINK_PATH 	 =  "./l/$GENERATED_FORM_FILENAME";
 
             open my $in, '<', $LINK_TEMPLATE_PATH or die "Can't read link template file: $!";
-            open my $out, '>', $LINK_FILENAME or die "Can't write to link file: $!";
+            open my $out, '>', $LINK_PATH or die "Can't write to link file: $!";
             while( <$in> ) {
                 s/{link_user}/{$link_asker}/g;
                 s/{link_filename}/{$GENERATED_FORM_FILENAME}/g;
@@ -123,7 +125,7 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
                 print $out $_;
             }
             close $in or die;
-            chmod(0755,$LINK_FILENAME) or die;
+            chmod(0755,$LINK_PATH) or die;
             close $out or die;
 
             $linkgen_notif = qq{<span style="color:green">$text_strings{link_generated_ok} $link_asker: </span><br><a href="$HREF_LINK">$HREF_LINK</a>};          
@@ -202,7 +204,7 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
                     <input tabindex="2" type="submit" value="$text_strings{create_link_btn}">
                 </form>},
                 notif_if_defined($mailisok_notif),
-                '<br>'
+                '<br>',
                 notif_if_defined($linkgen_notif),
                 qq{<hr>
                 <form method="POST">
@@ -223,5 +225,32 @@ if (argon2id_verify($PASSWD_HASH,$PASSWD)){
         </html>};
 }
 else {
-    print 'Location: /index.html', "\n\n";
+    print 'Content-type: text/html',"\n\n",
+    qq{<!DOCTYPE html>
+    <html>
+        <head>
+            <link rel="icon" type="image/x-icon" href="/favicon.ico">
+            <link rel="stylesheet" type="text/css" href="/styles.css">
+            <title>$text_strings{web_title}</title>
+            <meta charset="utf-8">
+        </head>
+        <body>
+            <form action="/cgi-bin/gpigeon.cgi" method="POST">
+            <h1 style="text-align:center">GPIGEON</h1>
+            Mot de passe : <input type="password" name="password"><br>
+            <input type="submit" value="$text_strings{login}">
+            </form>
+
+            <p><a
+            href="http://git.les-miquelots.net/gpigeon"
+            title="gpigeon download link" alt="gpigeon download link">Source code here.</a> It is similar to <a href="https://hawkpost.co/">hawkpost.co</a>.</p>
+
+            <a href="https://xkcd.com/538"><img id="crypto_secu"
+            src="security.png" title="XKCD fait redescendre les nerds du
+            chiffrement sur terre (xkcd.com/538)" alt="BD de XKCD faisant redescendre les
+            nerds du chiffrement sur terre"></a>
+
+        </body>
+
+    </html>};
 }
