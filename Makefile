@@ -14,7 +14,7 @@ install:
 		ARGON2ID_HASH="`tail -1 genpass.txt`"; \
 	fi
 	sed -e 's|argon2id_hash_goes_here|$(ARGON2ID_HASH)|g' -i $(DESTDIR)$(WWWPREFIX)/cgi-bin/gpigeon.cgi
-	sed -e "s|cookies_dir_goes_here|${PREFIX}/cookies|g" -i $(DESTDIR)$(WWWPREFIX)/cgi-bin/gpigeon.cgi
+	sed -e "s|cookies_dir_goes_here|$(COOKIES_DIR)|g" -i $(DESTDIR)$(WWWPREFIX)/cgi-bin/gpigeon.cgi
 	sed -e "s|link_template_path_goes_here|$(LINK_TEMPLATE_PATH)|g" -i $(DESTDIR)$(WWWPREFIX)/cgi-bin/gpigeon.cgi
 	sed -e "s|msg_char_limit_goes_here|$(MSG_FORM_CHAR_LIMIT)|g" -i $(DESTDIR)$(LINK_TEMPLATE_PATH)
 	cp -f link-tmpl.cgi $(DESTDIR)$(LINK_TEMPLATE_PATH)

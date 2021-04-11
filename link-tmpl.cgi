@@ -1,7 +1,5 @@
 #! /usr/bin/perl -wT
 my $linkuser = q{link_user};
-my $linkfilename = q{link_filename};
-
 use warnings;
 use strict;
 use GPG;
@@ -10,30 +8,31 @@ use CGI qw(param);
 $ENV{'PATH'}="/usr/bin";
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 
-sub escape_arobase {
+sub EscapeArobase {
     my $escapedmailaddress = shift;
     $escapedmailaddress =~ s/@/\\@/;
     return $escapedmailaddress;
 }
 
-my $HAS_MAILSERVER = 0;
-my $mymailaddr = q{your mail address goes here};
-my $mymail_gpgid = q{your gpg id in the 0xlong form goes here}; #0xlong keyid form
-my $mailsender = q{mail address sending encrypted text goes here. recommended to be different from $mymailaddr};
-my $mailsender_smtp = q{your SMTP mail domain name goes here};
-my $mailsender_port = q{your SMTP port goes here};
-my $mailsender_pw = q{password for $mailsender address goes here};
-my $GPG_HOMEDIR = '/usr/share/webapps/gpigeon/gnupg/';
+my $HAS_MAILSERVER = q{has_mailserver_goes_here};
+my $msg_form_char_limit = q{msg_char_limit_goes_here};
+my $mymailaddr = q{your_addr_goes_here};
+my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
+my $mailsender = q{sender_addr_goes_here};
+my $mailsender_smtp = q{smtp_domain_goes_here};
+my $mailsender_port = q{smtp_port_goes_here};
+my $mailsender_pw = q{sender_pw_goes_here};
+my $GPG_HOMEDIR = q{gpg_homedir_goes_here};
 my $cgi_query_get = CGI->new;
 my $msg_form = $cgi_query_get->param('msg');
 my $length_msg_form = length $msg_form;
 my ($enc_msg, $error_processing_msg) = undef;
 
-if (defined $length_msg_form and $length_msg_form > {msg_form_char_limit}){
-    $error_processing_msg = q{<span style="color:red"><b>{msg_too_long}</b></span>};
+if (defined $length_msg_form and $length_msg_form > $msg_form_char_limit){
+    $error_processing_msg = qq{<span style="color:red"><b>Cannot send message : message length must be under $msg_form_char_limit characters.</b></span>};
 } 
 elsif (defined $length_msg_form and $length_msg_form eq 0 ){
-    $error_processing_msg = q{<span style="color:red"><b>{msg_empty}</b></span>};
+    $error_processing_msg = qq{<span style="color:red"><b>Cannot send message : message is empty. You can type up to $msg_form_char_limit characters.</b></span>};
 }
 else {
     if (defined $length_msg_form and $ENV{REQUEST_METHOD} eq 'POST'){
@@ -55,8 +54,8 @@ else {
            use Net::SMTP;
            use Net::SMTPS;
            my $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
-           my $mymailaddr_escaped = escape_arobase{$mymailaddr};
-           my $mailsender_escaped = escape_arobase($mailsender);
+           my $mymailaddr_escaped = EscapeArobase{$mymailaddr};
+           my $mailsender_escaped = EscapeArobase($mailsender);
 
            $smtp->auth($mailsender, $mailsender_pw) or die;
            $smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
@@ -72,8 +71,10 @@ else {
            else {
               die $smtp->message();
            }
-
-           unlink "../l/$linkfilename";
+           my $f = $0;
+           if ($f =~ /^([\w]+)$/){
+               unlink "$1";
+           }
            print "Location: /merci/index.html\n\n"; 
        }
    }
@@ -91,7 +92,7 @@ print qq{<!DOCTYPE html>
     <body>
         <p>{type_msg_below}:</p>
             <form method="POST">
-                <textarea wrap="off" cols="50" rows="30" name="msg"></textarea><br>
+                <textarea id="msg" wrap="off" cols="50" rows="30" name="msg"></textarea><br>
 };
 if (defined $error_processing_msg){
     printf $error_processing_msg;

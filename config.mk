@@ -2,6 +2,7 @@
 
 # paths
 PREFIX = /usr/share/webapps/gpigeon
+COOKIES_DIR = $(PREFIX)/cookies
 _GPG_HOMEDIR = $(PREFIX)/gnupg
 LINK_TEMPLATE_PATH = $(PREFIX)/link-tmpl.cgi
 WWWPREFIX = /var/www/gpigeon
