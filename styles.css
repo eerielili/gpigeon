@@ -33,3 +33,19 @@ body{
       margin:auto;
       font-size:12pt;
 }
+
+#msg{
+    border: 1px solid black;
+    resize:vertical;
+    width:50%;
+}
+
+@media screen and (max-width: 740px) {
+    body { font-size:0.8em; }
+    #msg{width:100%;}
+    th, td{ padding:3px; }
+    input {
+        padding:4px;
+        margin: 2px;
+    }
+}
