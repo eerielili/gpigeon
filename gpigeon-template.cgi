@@ -120,7 +120,6 @@ my %text_strings = (
     delete_links_btn_text => 'Delete all links',
     logout_btn_text => 'Logout',
     here => 'here',
-    login => 'Login',
     link_asker_field_label => q{Asker's mail :},
     link_web_title => 'One time GPG messaging form',
     link_del_ok => 'Successful removal !',
@@ -131,7 +130,6 @@ my %text_strings = (
     mailto_body => 'Your link is ',
     mailto_subject => 'Link to your one time GPG messaging form',
     notif_login_failure => 'Cannot login. Check if your username and password match.'
-    passwd_label => 'Password :',
     refresh_btn_text => 'Refresh',
     type_msg_below => 'Type your message below',
     theader_link => 'Link', 
@@ -322,25 +320,5 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
         </html>};
 }
 else{
-    print "Content-Type: text/html\n\n",
-    qq{<!DOCTYPE html>
-    <html>
-        <head>
-            <link rel="icon" type="image/x-icon" href="/favicon.ico">
-            <link rel="stylesheet" type="text/css" href="/styles.css">
-            <title>$text_strings{web_title}</title>
-            <meta charset="utf-8">
-        </head>
-        <body>
-            <form action="/cgi-bin/gpigeon.cgi" method="POST">
-            <h1>GPIGEON</h1>
-	    <label for="pwfield">&nbsp;$text_strings{passwd_label}:</label>
-            <input id="pwfield" type="password" name="password"><br>
-            <input type="submit" value="$text_strings{login}">
-            </form>
-            <p>&nbsp;<a
-            href="http://git.les-miquelots.net/gpigeon"
-            title="gpigeon download link" alt="gpigeon download link">Source code here.</a> It is similar to <a href="https://hawkpost.co/">hawkpost.co</a>.</p>
-        </body>
-    </html>};
+    print "Location: /\n\n";
 }
