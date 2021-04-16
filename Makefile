@@ -7,7 +7,8 @@ install:
 	mkdir -p $(DESTDIR)$(_GPG_HOMEDIR)
 	chmod 700 $(DESTDIR)$(_GPG_HOMEDIR)
 	mkdir -p $(DESTDIR)$(WWWPREFIX)/cgi-bin/l
-	cp -f gpigeon-template.cgi $(DESTDIR)$(WWWPREFIX)/cgi-bin/gpigeon.cgi
+	cp -f gpigeon-template.cgi $(DESTDIR)$(WWWPREFIX)/cgi-bin/
+	cp -f index.html $(DESTDIR)$(WWWPREFIX)/
 	chmod 700 $(DESTDIR)$(WWWPREFIX)/cgi-bin/gpigeon.cgi
 	if test -z '$(ARGON2ID_HASH)'; then \
 		perl genpass.pl > genpass.txt; \
@@ -41,11 +42,11 @@ install:
 	fi
 	sed -e "s|has_mailserver_goes_here|$(HAS_MAILSERVER)|g" -i $(DESTDIR)$(LINK_TEMPLATE_PATH)
 	sed -e "s|gpg_homedir_goes_here|$(_GPG_HOMEDIR)|g" -i $(DESTDIR)$(LINK_TEMPLATE_PATH)
-	cp -f styles.css $(DESTDIR)$(WWWPREFIX)
+	cp -f styles.css $(DESTDIR)$(WWWPREFIX)/
 	chmod 644 $(DESTDIR)$(WWWPREFIX)/styles.css
-	cp -f favicon.ico $(DESTDIR)$(WWWPREFIX)
+	cp -f favicon.ico $(DESTDIR)$(WWWPREFIX)/
 	chmod 644 $(DESTDIR)$(WWWPREFIX)/favicon.ico
-	cp -rf merci $(DESTDIR)$(PREFIX)
+	cp -rf merci $(DESTDIR)$(PREFIX)/
 	chmod 755 -R $(DESTDIR)$(PREFIX)
 	if test -e 'genpass.txt'; then \
 	    printf "\n\nThe variable ARGON2ID_HASH wasn't declared thus a password and its argon2id hash as been generated (look into genpass.txt)."; \
