@@ -25,17 +25,17 @@ Dependencies
 
 You will need perl and the following modules and my perl version is **v5.34.0**, YMMV:
 
-    - HTML::Entities
-    - CGI
-    - CGI::Carp
-    - CGI::Cookies
-    - Crypt::Argon2
-    - GPG
-    - Net:SSLeay
-    - Net::SMTP
-    - Net::SMTPS
-    - Email::Valid 
-    - String::Random 
+- HTML::Entities
+- CGI
+- CGI::Carp
+- CGI::Cookies
+- Crypt::Argon2
+- GPG
+- Net:SSLeay
+- Net::SMTP
+- Net::SMTPS
+- Email::Valid 
+- String::Random 
 
 Having a webserver with CGI support or a separate CGI engine is needed. I'm using
 nginx and fcgiwrap.
