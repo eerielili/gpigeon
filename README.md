@@ -42,8 +42,7 @@ nginx and fcgiwrap.
 A note on **Net::SMTP** and **Net:SMTPS** dependencies: if you have a mailserver well
 configured with SPF and OpenDKIM (so your chances to get your mail
 treated as spam is greatly reduced) you should set the `HAS_MAILSERVER`
-variable in
-[link-tmpl.cgi](https://git.les-miquelots.net/gpigeon/plain/link-tmpl.cgi) to 1.
+variable in `config.mk` to 1.
 
 
 Installation
