@@ -57,6 +57,9 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
 		printf "\nAnd the hash is:\n${BOLD}%s${STOP}\n\n" '${RANDOM_ARGON2}'; \
 		rm -f genpass.txt; \
 	fi
+	
+
+	
 	@if test -n '$(MYGPG_ID_0XLONG)'; then \
 		printf "Mails will be encrypted to you with the ${BOLD}$(MYGPG_ID_0XLONG)${STOP} GPG key\n"; \
 		sed -e 's|gpgid_goes_here|$(MYGPG_ID_0XLONG)|g' link-tmpl-template.cgi > link-tmpl.cgi; \
@@ -84,9 +87,6 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
         	$(MAKE) clean ; \
         	exit 1; \
 	fi
-	
-	
-	
 	@if [ '${HAS_MAILSERVER}' == '1' ]; then \
 		printf "Local mail server setup. ${BOLD}Mail::Sendmail module will be used to send the mails${STOP}.\n"; \
 	else \
