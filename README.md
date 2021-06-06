@@ -81,7 +81,7 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/ggon.example.com/privkey.pem;
     error_log /var/log/gpigeon.log;
     index index.html index.htm;
-    include /etc/nginx/hotlinking.conf;
+    
     location = /cgi-bin/gpigeon.cgi {
         ssi off;
         gzip off;
