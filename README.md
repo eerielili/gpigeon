@@ -62,7 +62,7 @@ and [link-tmpl-template.cgi](https://git.les-miquelots.net/gpigeon/plain/link-tm
 **Hint**: look for variables values ending in _goes_here_.
 
 Your nginx configuration should look like this:
-```
+```nginx
 server {
     listen 80;
     server_name ggon.example.com;
