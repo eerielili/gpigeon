@@ -4,7 +4,7 @@ GPIGEON
 Gpigeon generate links for a GPG user to be sent to a non technical person (or
 not a GPG user) so they can send you encrypted mail messages via a one-time
 web link.
-Feels of déjàvu ? I was inspired by [https://hawkpost.co](https://hawpost.co) but wasn't really
+Feels of déjàvu ? I was inspired by [https://hawkpost.co](https://hawkpost.co) but wasn't really
 interested in the multi-user perspective and managing a database.
 
 Features
