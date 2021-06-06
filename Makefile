@@ -87,6 +87,9 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
         	$(MAKE) clean ; \
         	exit 1; \
 	fi
+	
+	
+	
 	@if [ '${HAS_MAILSERVER}' == '1' ]; then \
 		printf "Local mail server setup. ${BOLD}Mail::Sendmail module will be used to send the mails${STOP}.\n"; \
 	else \
@@ -126,6 +129,10 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
 	fi
 	@sed -e 's|has_mailserver_goes_here|$(HAS_MAILSERVER)|g' link-tmpl-template.cgi > link-tmpl.cgi 
 	@sed -e 's|gpg_homedir_goes_here|$(_GPG_HOMEDIR)|g' link-tmpl-template.cgi > link-tmpl.cgi
+	@if test -n '$(WWWDOMAIN)' && test -n '$(WWWPREFIX)'; then\
+		$(MAKE) nginxconf;\
+		printf "Done generating $(WWWDOMAIN).conf for nginx.";\
+	fi
 	@printf "\nDone preparing files. You can now type\nsudo make install\nin your terminal.\n"
 		
 install:
@@ -137,12 +144,20 @@ install:
 	install -Dm600 link-tmpl.cgi $(DESTDIR)$(LINK_TEMPLATE_PATH)
 	install -Dm644 index.html favicon.ico styles.css -t $(DESTDIR)$(WWWPREFIX)/
 	install -Dm755 merci/* -t $(DESTDIR)$(PREFIX)/merci/
+	@if test -e '$(WWWDOMAIN).conf'; then\
+		printf "\nInstalling $(WWWDOMAIN).conf into $(NGINXCONFDIR)\n";\
+		install -Dm644 $(WWWDOMAIN).conf -t $(DESTDIR)$(NGINXCONFDIR);\
+	fi
 
+nginxconf: nginx-example.conf
+	@sed -e 's|wwwpath_goes_here|$(WWWPREFIX)|g;s|domain_goes_here|$(WWWDOMAIN)|g' nginx-example.conf > $(WWWDOMAIN).conf ;\
+	
+	
 uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)
 	rm -rf $(DESTDIR)$(WWWPREFIX)
 	
 clean:
-	rm -f genpass.txt gpg.txt link-tmpl.cgi gpigeon.cgi
+	rm -f genpass.txt gpg.txt link-tmpl.cgi gpigeon.cgi $(WWWDOMAIN).conf
 
 .PHONY: clean install uninstall

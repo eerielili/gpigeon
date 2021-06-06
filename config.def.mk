@@ -23,3 +23,8 @@ MAILSENDER =# the mailer address that'll send you the encrypted mails
 MAILSENDER_PW =# password for the mailer address
 SMTP_DOMAIN =# smtp domain pour the mailer
 SMTP_PORT =# smtp port for the mailer
+
+#optional, domain to generate nginx config for
+#and where to put the config
+WWWDOMAIN=
+NGINXCONFDIR=/etc/nginx/sites-enabled

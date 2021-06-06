@@ -94,7 +94,6 @@ server {
         fastcgi_pass unix:/run/fcgiwrap.sock;
         include /etc/nginx/fastcgi_params;
     }
-
-    include errorpages.conf;
 }
 ```
+You can also tune the `WWWDOMAIN` and `NGINXCONFDIR` variable in your `config.mk` to have it generated for you when running `make`.
