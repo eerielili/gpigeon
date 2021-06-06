@@ -10,15 +10,15 @@ interested in the multi-user perspective and managing a database.
 Features
 ========
 
-    * Single user: no database required.
-    * One-time GPG form: after sending the encrypted message, the generated form
+- Single user: no database required.
+- One-time GPG form: after sending the encrypted message, the generated form
     self-destructs.
-    * Cookie based login. If you block cookies, it will switch back to
+- Cookie based login. If you block cookies, it will switch back to
     hidden fields so you can still login.
-    * A table of the links generated is visible when you connect so you can
+- A table of the links generated is visible when you connect so you can
     keep track of what has been created. You can also delete link
     individually, or all at once.
-    * No javascript used for the moment.
+- No javascript used for the moment.
 
 Dependencies
 ============
