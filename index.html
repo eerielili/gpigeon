@@ -1,21 +1,38 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Gpigeon login page</title>
-        <link rel="icon" type="image/x-icon" href="favicon.ico">
-        <link rel="stylesheet" type="text/css" href="gpigeon.css">
+        <title>GPIGEON - Login</title>
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
+        <link rel="stylesheet" type="text/css" href="styles.css">
         <meta charset="utf-8">
+        <style>
+            td{border:none;}
+        </style>
     </head>
     <body>
-        <h1 style="text-align:center">📧 Gpigeon 🕊️</h1>
-        <form action="/cgi-bin/gpigeon.cgi" method="POST">
-          👤 Username : <input type="text"     name="user">
-          <br>
-          🔒 Password : <input type="password" name="password">
-          <input type="submit" value="Log in">
-          <p><a href="register/index.html" alt="Creation of a
-          gpigeon.les-miquelots.net
-          account">Create an account</a><p>
-        </form>
+        <h1 style="text-align:center">GPIGEON - Login</h1>
+    <form action="/cgi-bin/gpigeon.cgi" method="POST">
+    <table style="border:none;margin-right:auto;margin-left:auto">
+    <tbody>
+    <tr>
+    <td>Username :</td>
+    <td><input type="text" name="username"></td>
+
+    </tr>
+    <tr>
+    <td>Password :</td>
+    <td><input type="password" name="password"></td>
+
+    </tr>
+    <tr>
+    <td></td>
+    <td><input type="submit" value="S'authentifier"></td>
+    </tr>
+    </tbody>
+    </table>
+    </form>
+
+        <p><a href="http://git.les-miquelots.net/gpigeon" title="gpigeon download link" alt="gpigeon download link">Source code here.</a> It is similar to <a href="https://hawkpost.co/">hawkpost.co</a>.</p>
+
     </body>
 </html>

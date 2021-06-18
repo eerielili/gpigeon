@@ -1,0 +1,101 @@
+#! /usr/bin/perl -T
+
+use warnings;
+use strict;
+use Email::Valid;
+use Term::ReadKey;
+use Crypt::Argon2 qw(argon2id_pass);
+use SQLite::DB;
+delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
+$ENV{'PATH'} = '/usr/bin';
+my $db_path = '/usr/share/gpigeon/the.db';
+my $escaddr = undef;
+
+sub EscapeArobase {
+    my $escapedmailaddress = shift;
+    $escapedmailaddress =~ s/@/\\@/;
+    return $escapedmailaddress;
+}
+
+if (defined $ARGV[0] and $ARGV[0] eq 'init'){
+    if ( -e $db_path){
+	print "The database already exist !\n";
+	print "Overwrite ? [o/n] ";
+	my $ochoice = <STDIN>;
+	chomp $ochoice;
+	if ($ochoice eq "o"){
+		unlink $db_path;
+	}
+	else {
+		print "We won't overwrite.\n";
+		exit 1;
+	}
+    }
+    print "Your mail address: ";
+    my $addr = <STDIN>;
+
+    if (not Email::Valid->address($addr)){
+        print "\nNot a valid email address.";
+        exit 1; 
+    }
+    
+    print "\nYour nickname (optional): ";
+    my $nick = <STDIN>;
+    chomp $nick;
+    if (length($nick) eq 0){
+        $nick = $addr;
+    }
+    elsif (defined $nick and not $nick =~ /^([\w]+)$/){
+        print "\nYour nickname must have only alphanumeric characters.\n";
+        exit 1;
+    }
+
+    ReadMode 2;
+    print "\nPassword: ";
+    my $pass = <STDIN>;
+    if (not length($pass) > 10){
+        print "\nFor your safety, you should have a password at least 10 characters long.\n";
+        ReadMode 1;
+        exit 1;
+    }
+    ReadMode 1;
+    chomp $pass;
+    my $salt = `openssl rand 16`;
+    my $hash = argon2id_pass($pass, $salt, 3, '32M', 1, 32);
+
+    use GPG;
+    #my $GHOMEDIR = 'testgpg/';
+    #my $escaddr = EscapeArobase($addr);
+	if ($addr =~ /^([-\@\w.]+)$/) {
+		$addr = $1;                     # $data now untainted
+		$escaddr = EscapeArobase($addr);
+	} else {
+		die "uh oh\n";      # log this somewhere
+	}
+    my $gpgid = `gpg --with-colons -k $escaddr | grep "pub:u" | cut -d':' -f5`;
+    #my $gpgid = <STDIN>;
+    chomp $gpgid;
+    if (not $gpgid =~ /^([\w]+)$/ and not length($gpgid) eq 16){
+        print "\nYour GPG 0xlong key id is not a correct one. It seems that no public key was assiocated with the provided e-mail address.\n";
+        exit 1;
+    }
+    else{
+	$gpgid = $1;
+    }
+    `gpg -a --export 0x$gpgid > key.asc && gpg --homedir /tmp/testgpg/ --no-default-keyring --keyring=test.kbx --import key.asc 2>&1 /dev/null`;
+    my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir => "/tmp/testgpg");
+    my $enc_msg = $gpg->encrypt("test", $gpgid)
+        or die "\nOops, it seems gpg won't encrypt the test message. Here's why :\n",$gpg->error();
+
+    my $db = SQLite::DB->new($db_path);
+    $db->connect;
+    $db->transaction_mode;
+    $db->exec("create table pigeons (userid integer primary key, mail text, name text, pass text, gpgfp text, isadmin integer);");
+    $db->exec("create table cookies (forid integer, value text);");
+    $db->exec("create index idx_pigeonsid on pigeons(userid);");
+    $db->exec("create index idx_cookiesforid on cookies(forid);");
+    $db->exec("INSERT INTO pigeons VALUES( ?, '$addr', '$nick', '$hash', '0x$gpgid', 1)");
+    $db->commit or die;
+    $db->disconnect;
+    print "\nThe database has been initialized.\n";
+}
