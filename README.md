@@ -47,7 +47,7 @@ Installation
 ============
 
 Don't forget to copy `config.def.mk` into `config.mk` and tune
-the variable to your liking. Then, you can run the good old:
+the variables to your liking. Then, you can run the good old:
 ```
 make
 make install #you'll maybe need sudo though
