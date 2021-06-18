@@ -39,9 +39,7 @@ You will need perl and the following modules and my perl version is **v5.34.0**,
 
 Having a webserver with CGI support or a separate CGI engine is needed. I'm using
 nginx and fcgiwrap.
-A note on **Net::SMTP** and **Net:SMTPS** dependencies: if you have a mailserver well
-configured with SPF and OpenDKIM (so your chances to get your mail
-treated as spam is greatly reduced) you should set the `HAS_MAILSERVER`
+A note on **Net::SMTP** and **Net:SMTPS** dependencies: if you have a well configured mailserver on the same server you plan to install gpigeon on, you should set the `HAS_MAILSERVER`
 variable in `config.mk` to 1.
 
 

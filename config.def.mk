@@ -17,9 +17,9 @@ ARGON2ID_HASH =
 # gpg and email vars
 HAS_MAILSERVER = 0# choose 0 if you'll use an external mail server, 1 if local mail server installed.
 # you don't need to set the 3 last variables if you got a local mailserver.
-MYGPG_ID_0XLONG =# the 0xlong format of your gpg key.
-MYMAIL_ADDR =# your mail address
-MAILSENDER =# the mailer address that'll send you the encrypted mails
+MYGPG_ID_0XLONG =# the 0xlong format of your gpg key. - required
+MYMAIL_ADDR =# your mail address - required
+MAILSENDER =# the mailer address that'll send you the encrypted mails - required
 MAILSENDER_PW =# password for the mailer address
 SMTP_DOMAIN =# smtp domain pour the mailer
 SMTP_PORT =# smtp port for the mailer
