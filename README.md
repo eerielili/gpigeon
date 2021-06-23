@@ -48,14 +48,16 @@ Installation
 
 Don't forget to copy `config.def.mk` into `config.mk` and tune
 the variables to your liking. Then, you can run the good old:
-```
-make
-make install #you'll maybe need sudo though
+```bash
+# you will need to do "sudo make install" if you
+# are a non root user
+make install
 ```
 
 You should also look in the
 [gpigeon-template.cgi](https://git.les-miquelots.net/gpigeon/plain/gpigeon-template.cgi)
 and [link-tmpl-template.cgi](https://git.les-miquelots.net/gpigeon/plain/link-tmpl-template.cgi) source code, you should figure things out quickly.
+
 **Hint**: look for variables values ending in _goes_here_.
 
 Your nginx configuration should look like this:

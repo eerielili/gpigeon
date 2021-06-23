@@ -136,6 +136,7 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
 	@printf "\nDone preparing files. You can now type\nsudo make install\nin your terminal.\n"
 		
 install:
+	$(MAKE) gpigeon;
 	mkdir -p $(DESTDIR)$(COOKIES_DIR);
 	mkdir -m700 -p $(DESTDIR)$(_GPG_HOMEDIR);
 	GNUPGHOME="$(DESTDIR)$(_GPG_HOMEDIR)" gpg --import gpg.txt; \
