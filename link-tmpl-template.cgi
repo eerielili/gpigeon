@@ -36,48 +36,48 @@ elsif (defined $length_msg_form and $length_msg_form eq 0 ){
 }
 else {
     if (defined $length_msg_form and $ENV{REQUEST_METHOD} eq 'POST'){
-       $msg_form =~ tr/\r//d;
-       my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir => $GPG_HOMEDIR);
-       $enc_msg = $gpg->encrypt("$linkuser:\n\n$msg_form", $mymail_gpgid) or die $gpg->error();
+        $msg_form =~ tr/\r//d;
+        my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir => $GPG_HOMEDIR);
+        $enc_msg = $gpg->encrypt("$linkuser:\n\n$msg_form", $mymail_gpgid) or die $gpg->error();
 
-       if ($HAS_MAILSERVER){
-           undef $mymailaddr_escaped;
-           use Mail::Sendmail;
-           my %mail = ( To => "$mymailaddr"
-                     From => "$mailsender"
-                     Subject => '.'
-                     Message => "$enc_msg\n" 
-           );
-           sendmail(%mail) or die $Mail::Sendmail::error;
-       }
-       else {
-           use Net::SMTP;
-           use Net::SMTPS;
-           my $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
-           my $mymailaddr_escaped = EscapeArobase{$mymailaddr};
-           my $mailsender_escaped = EscapeArobase($mailsender);
+        if ($HAS_MAILSERVER){
+            undef $mymailaddr_escaped;
+            use Mail::Sendmail;
+            my %mail = ( To => "$mymailaddr"
+            From => "$mailsender"
+            Subject => '.'
+            Message => "$enc_msg\n" 
+            );
+            sendmail(%mail) or die $Mail::Sendmail::error;
+        }
+        else {
+            use Net::SMTP;
+            use Net::SMTPS;
+            my $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
+            my $mymailaddr_escaped = EscapeArobase{$mymailaddr};
+            my $mailsender_escaped = EscapeArobase($mailsender);
 
-           $smtp->auth($mailsender, $mailsender_pw) or die;
-           $smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
-           if ($smtp->to($mymailaddr)){
-              $smtp->data();
-              $smtp->datasend("From: $mailsender_escaped\n");
-              $smtp->datasend("To: $mymailaddr_escaped\n");
-              $smtp->datasend("Subject: .\n");
-              $smtp->datasend("\n");
-              $smtp->datasend("$enc_msg\n");
-              $smtp->dataend();
-           }
-           else {
-              die $smtp->message();
-           }
-           my $f = $0;
-           if ($f =~ /^([\w]+)$/){
-               unlink "$1";
-           }
-           print "Location: /merci/index.html\n\n"; 
-       }
-   }
+            $smtp->auth($mailsender, $mailsender_pw) or die;
+            $smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
+            if ($smtp->to($mymailaddr)){
+                $smtp->data();
+                $smtp->datasend("From: $mailsender_escaped\n");
+                $smtp->datasend("To: $mymailaddr_escaped\n");
+                $smtp->datasend("Subject: .\n");
+                $smtp->datasend("\n");
+                $smtp->datasend("$enc_msg\n");
+                $smtp->dataend();
+            }
+            else {
+                die $smtp->message();
+            }
+        }
+
+        if ($0 =~ /([\w]+)\.cgi$/){
+            unlink "$1.cgi";
+        }
+        print "Location: /merci/index.html\n\n"; 
+    }
 }
 print "Content-type: text/html", "\n\n";
 print qq{<!DOCTYPE html>

@@ -136,9 +136,9 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
 	@printf "\nDone preparing files. You can now type\nsudo make install\nin your terminal.\n"
 		
 install:
-	mkdir -p $(DESTDIR)$(COOKIES_DIR)
-	mkdir -m700 -p $(DESTDIR)$(_GPG_HOMEDIR)
-	gpg --homedir "$(DESTDIR)$(_GPG_HOMEDIR)" --import gpg.txt; \
+	mkdir -p $(DESTDIR)$(COOKIES_DIR);
+	mkdir -m700 -p $(DESTDIR)$(_GPG_HOMEDIR);
+	GNUPGHOME="$(DESTDIR)$(_GPG_HOMEDIR)" gpg --import gpg.txt; \
 	mkdir -p $(DESTDIR)$(WWWPREFIX)/cgi-bin/l
 	install -Dm700 gpigeon.cgi $(DESTDIR)$(GPIGEON_PATH)
 	install -Dm600 link-tmpl.cgi $(DESTDIR)$(LINK_TEMPLATE_PATH)

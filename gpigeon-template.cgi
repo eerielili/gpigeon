@@ -1,4 +1,4 @@
-#! /usr/bin/perl -wT
+#! /usr/bin/perl -T
 
 use warnings;
 use strict;
@@ -26,9 +26,7 @@ sub ValidCookie {
     my $login_cookiefile = "$dir/$filename.txt";
     if (-e $login_cookiefile){ 
         open my $in, '<', $login_cookiefile or die "can't read file: $!";
-        for(1){
-            my $cookie_line = readline $in;
-        }
+        my $cookie_line = readline $in;
         close $in;
         if (not defined $cookie_line){
             return;
