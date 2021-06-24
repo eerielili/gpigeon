@@ -104,7 +104,7 @@ delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 $ENV{'PATH'} = '/usr/bin';
 my $hostname = $ENV{'SERVER_NAME'};	
 
-my $argon2id_hash       = q{argon2id_hash_goes_here}
+my $argon2id_hash       = q{argon2id_hash_goes_here};
 my $cookies_dir         = q{cookies_dir_goes_here};
 my $link_template_path  = q{link_template_path_goes_here};
 
