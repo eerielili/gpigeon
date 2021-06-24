@@ -1,5 +1,6 @@
 #! /usr/bin/perl -wT
 my $linkuser = q{link_user};
+my $linkfilename = q{link_filename};
 use warnings;
 use strict;
 use GPG;
@@ -73,9 +74,7 @@ else {
             }
         }
 
-        if ($0 =~ /([\w]+)\.cgi$/){
-            unlink "$1.cgi";
-        }
+        unlink $linkfilename;
         print "Location: /merci/index.html\n\n"; 
     }
 }
