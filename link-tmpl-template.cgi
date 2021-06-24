@@ -1,5 +1,6 @@
 #! /usr/bin/perl -wT
 my $linkuser = q{link_user};
+my $linkfilename = q{link_filename};
 use warnings;
 use strict;
 use GPG;
@@ -16,7 +17,7 @@ sub EscapeArobase {
 
 my $HAS_MAILSERVER = q{has_mailserver_goes_here};
 my $msg_form_char_limit = q{msg_char_limit_goes_here};
-my $mymailaddr = q{your_addr_goes_here};
+my $mymailaddr = q{user_mailaddr_goes_here};
 my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
 my $mailsender = q{sender_addr_goes_here};
 my $mailsender_smtp = q{smtp_domain_goes_here};
@@ -29,24 +30,23 @@ my $length_msg_form = length $msg_form;
 my ($enc_msg, $error_processing_msg) = undef;
 
 if (defined $length_msg_form and $length_msg_form > $msg_form_char_limit){
-    $error_processing_msg = qq{<span style="color:red"><b>Cannot send message : message length must be under $msg_form_char_limit characters.</b></span>};
+    $error_processing_msg = qq{<span id="failure"><b>Cannot send message : message length must be under $msg_form_char_limit characters.</b></span>};
 } 
 elsif (defined $length_msg_form and $length_msg_form eq 0 ){
-    $error_processing_msg = qq{<span style="color:red"><b>Cannot send message : message is empty. You can type up to $msg_form_char_limit characters.</b></span>};
+    $error_processing_msg = qq{<span id="failure"><b>Cannot send message : message is empty. You can type up to $msg_form_char_limit characters.</b></span>};
 }
 else {
     if (defined $length_msg_form and $ENV{REQUEST_METHOD} eq 'POST'){
-        $msg_form =~ tr/\r//d;
+        $msg_form =~ tr/\r//d; # if we dont do this,  ^M character in plain text mail
         my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir => $GPG_HOMEDIR);
         $enc_msg = $gpg->encrypt("$linkuser:\n\n$msg_form", $mymail_gpgid) or die $gpg->error();
 
         if ($HAS_MAILSERVER){
-            undef $mymailaddr_escaped;
             use Mail::Sendmail;
-            my %mail = ( To => "$mymailaddr"
-            From => "$mailsender"
-            Subject => '.'
-            Message => "$enc_msg\n" 
+            my %mail = ( To => "$mymailaddr",
+            From => "$mailsender",
+            Subject => '.',
+            Message => "$enc_msg\n"
             );
             sendmail(%mail) or die $Mail::Sendmail::error;
         }
@@ -54,7 +54,7 @@ else {
             use Net::SMTP;
             use Net::SMTPS;
             my $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
-            my $mymailaddr_escaped = EscapeArobase{$mymailaddr};
+            my $mymailaddr_escaped = EscapeArobase($mymailaddr);
             my $mailsender_escaped = EscapeArobase($mailsender);
 
             $smtp->auth($mailsender, $mailsender_pw) or die;
@@ -73,9 +73,7 @@ else {
             }
         }
 
-        if ($0 =~ /([\w]+)\.cgi$/){
-            unlink "$1.cgi";
-        }
+        unlink $linkfilename;
         print "Location: /merci/index.html\n\n"; 
     }
 }
@@ -90,7 +88,7 @@ print qq{<!DOCTYPE html>
        <title>{link_web_title}</title>
     </head>
     <body>
-        <p>{type_msg_below}:</p>
+        <p id="msgbelow">{type_msg_below}:</p>
             <form method="POST">
                 <textarea id="msg" wrap="off" cols="50" rows="30" name="msg"></textarea><br>
 };
@@ -99,7 +97,7 @@ if (defined $error_processing_msg){
 }
 printf q{
                 <br>
-               <input type="submit" value="{link_send_btn}">
+               <input id="sendbtn" type="submit" value="{link_send_btn}">
             </form>
     </body>
 </html> };
