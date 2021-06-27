@@ -42,7 +42,6 @@ else {
         $enc_msg = $gpg->encrypt("$linkuser:\n\n$msg_form", $mymail_gpgid) or die $gpg->error();
 
         if ($HAS_MAILSERVER){
-            undef $mymailaddr_escaped;
             use Mail::Sendmail;
             my %mail = ( To => "$mymailaddr"
             From => "$mailsender"
@@ -55,7 +54,7 @@ else {
             use Net::SMTP;
             use Net::SMTPS;
             my $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
-            my $mymailaddr_escaped = EscapeArobase{$mymailaddr};
+            my $mymailaddr_escaped = EscapeArobase($mymailaddr);
             my $mailsender_escaped = EscapeArobase($mailsender);
 
             $smtp->auth($mailsender, $mailsender_pw) or die;
