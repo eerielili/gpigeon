@@ -149,6 +149,8 @@ install:
 		printf "\nInstalling $(WWWDOMAIN).conf into $(NGINXCONFDIR)\n";\
 		install -Dm644 $(WWWDOMAIN).conf -t $(DESTDIR)$(NGINXCONFDIR);\
 	fi
+	chown $(WWWUSER):$(WWWUSER) -R $(DESTDIR)$(PREFIX)/gpigeon || exit 1;
+	chown $(WWWUSER):$(WWWUSER) -R $(DESTDIR)$(WWWPREFIX)/gpigeon || exit 1;
 
 nginxconf: nginx-example.conf
 	@sed -e 's|wwwpath_goes_here|$(WWWPREFIX)|g;s|domain_goes_here|$(WWWDOMAIN)|g' nginx-example.conf > $(WWWDOMAIN).conf ;\

@@ -8,6 +8,9 @@ LINK_TEMPLATE_PATH = $(PREFIX)/link-tmpl.cgi
 WWWPREFIX = /var/www
 GPIGEON_PATH = $(WWWPREFIX)/cgi-bin/gpigeon.cgi
 
+# system stuff
+WEBUSER=www-data #it must match up with your nginx user. For ex. on arch it's 'http'
+
 # CGI tuning stuff
 MSG_FORM_CHAR_LIMIT = 3000
 
