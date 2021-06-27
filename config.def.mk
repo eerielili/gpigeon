@@ -5,7 +5,7 @@ PREFIX = /usr/share/gpigeon
 COOKIES_DIR = $(PREFIX)/cookies
 _GPG_HOMEDIR = $(PREFIX)/gnupg
 LINK_TEMPLATE_PATH = $(PREFIX)/link-tmpl.cgi
-WWWPREFIX = /var/www/gpigeon
+WWWPREFIX = /var/www
 GPIGEON_PATH = $(WWWPREFIX)/cgi-bin/gpigeon.cgi
 
 # CGI tuning stuff

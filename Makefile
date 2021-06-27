@@ -143,7 +143,7 @@ install:
 	mkdir -p $(DESTDIR)$(WWWPREFIX)/cgi-bin/l
 	install -Dm700 gpigeon.cgi $(DESTDIR)$(GPIGEON_PATH)
 	install -Dm600 link-tmpl.cgi $(DESTDIR)$(LINK_TEMPLATE_PATH)
-	install -Dm644 index.html favicon.ico styles.css -t $(DESTDIR)$(WWWPREFIX)/
+	install -Dm644 index.html favicon.ico styles.css -t $(DESTDIR)$(WWWPREFIX)/gpigeon/
 	install -Dm755 merci/* -t $(DESTDIR)$(PREFIX)/merci/
 	@if test -e '$(WWWDOMAIN).conf'; then\
 		printf "\nInstalling $(WWWDOMAIN).conf into $(NGINXCONFDIR)\n";\
@@ -155,8 +155,8 @@ nginxconf: nginx-example.conf
 	
 	
 uninstall:
-	rm -rf $(DESTDIR)$(PREFIX)
-	rm -rf $(DESTDIR)$(WWWPREFIX)
+	rm -rf $(DESTDIR)$(PREFIX)/gpigeon
+	rm -rf $(DESTDIR)$(WWWPREFIX)/gpigeon
 	
 clean:
 	rm -f genpass.txt gpg.txt link-tmpl.cgi gpigeon.cgi $(WWWDOMAIN).conf
