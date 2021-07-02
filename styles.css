@@ -1,32 +1,7 @@
 html{
-    background-color:skyblue
-} 
-
-th{ 
-    padding:10px; 
-    font-size:110%; 
-} 
-
-td{ 
-    text-align:center; 
-    padding: 5px ;
-} 
-
-input{
-    padding:10px;
-    margin:5px;
-    margin-top:10px;
+    background-color:#87CEEB
 }
 
-table{
-    margin-top:10px;
-    border: 1px solid black;
-}
-
-th,tr,td{
-    border:1px solid black;
-}
-  
 body{
       font-family:sans-serif;
       width:80%;
@@ -34,18 +9,150 @@ body{
       font-size:12pt;
 }
 
-#msg{
+h1, #msgbelow{
+    text-align:center;
+}
+
+
+#linkstable tr th{
+    padding:10px;
+    font-size:110%;
+    margin:0;
+}
+
+#linkstable td{
+    text-align:center;
+    padding: 5px ;
+}
+
+#linkstable input{
+    padding:10px;
+    margin:5px;
+    margin-top:10px;
+}
+
+#linkstable table{
+    margin-top:10px;
     border: 1px solid black;
-    resize:vertical;
-    width:50%;
+}
+
+#linkstable td{
+    border:1px solid black;
+}
+
+#msg{
+    display:block;
+    margin-left:auto;
+    margin-right:auto;
+	border: 1px solid black;
+	overflow: -moz-scrollbars-none;
+	resize:vertical;
+	width:50%;
+	-ms-overflow-style:none;
+}
+
+
+#msg::-webkit-scrollbar {
+    width: 0 !important
+}
+
+#success {
+	color:green;
+}
+
+#failure {
+	color:red;
+}
+
+#loginbox {
+    border:none;
+    margin-right:auto;
+    margin-left:auto
+}
+
+#loginbox input {
+	width:100%;
+	padding: 5px;
+	line-height:25px;
+
+}
+
+#loginbox td {
+	text-align:right;
+	border:none;
+}
+
+#loginbox tr {
+	border:none;
+}
+
+#authbtn td {
+	text-align:center;
+}
+
+#authbtn input {
+	width:100px;
+}
+
+#mailfied {
+    padding: 10px
+}
+
+#refreshbtn, #deletelinkbtn, #deleteallbtn,
+#logoutbtn, #genlinkbtn, #sendbtn  {
+	border-radius:0
+	border:3px outset silver;
+	padding:15px;
+	margin:5px;
+}
+
+#mailfield {
+	padding: 10px;
 }
 
 @media screen and (max-width: 740px) {
-    body { font-size:0.8em; }
-    #msg{width:100%;}
-    th, td{ padding:3px; }
-    input {
-        padding:4px;
-        margin: 2px;
+	body {
+        font-size:0.8em;
+    }
+
+	#linkstable th,td{
+        padding:3px;
+    }
+
+	#linkstable input{
+	    padding:4px;
+	    margin:2px;
+	    margin-top:10px;
+	}
+	
+	#loginbox input{
+		padding: 2px;
+		line-height:15px;
+	}
+
+    #mailfield{
+        padding: 3px;
+    }
+   
+    #msg {
+        width:50%;
+        margin:0;
+    }
+
+    #msgbelow {
+        text-align:left;
+    }
+
+    #refreshbtn, #deletelinkbtn, #deleteallbtn,
+    #logoutbtn, #genlinkbtn, #sendbtn  {
+        padding: 8px
+    }
+   
+    #genlinkbtn{
+        display:block
+    }
+
+    #sendbtn {
+        display:inline
     }
 }

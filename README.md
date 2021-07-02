@@ -18,7 +18,7 @@ Features
 - A table of the links generated is visible when you connect so you can
     keep track of what has been created. You can also delete link
     individually, or all at once.
-- No javascript used for the moment.
+- No javascript used at the moment.
 
 Dependencies
 ============
@@ -94,6 +94,12 @@ server {
         fastcgi_pass unix:/run/fcgiwrap.sock;
         include /etc/nginx/fastcgi_params;
     }
+    
+    add_header Strict-Transport-Security "max-age=63072000; preload";
+    add_header Content-Security-Policy "default-src 'self'";
+    add_header X-Frame-Options DENY;
+    add_header Access-Control-Allow-Origin https://$server_name;
+    add_header Vary Origin; # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin#cors_and_caching
 }
 ```
 You can also tune the `WWWDOMAIN` and `NGINXCONFDIR` variable in your `config.mk` to have it generated for you when running `make`.
