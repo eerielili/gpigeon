@@ -229,14 +229,8 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
     }
 
     if (defined $cgi_query_get->param('supprtout')){
-        opendir my $link_dir_handle, './l' or die "Can't open ./l: $!";
-        while (readdir $link_dir_handle) {
-            if ($_ ne '.' and $_ ne '..'){
-                unlink UntaintCGIFilename("./l/$_") or die "$!";
-                $deletion_notif = qq{<span id="success">$text_strings{link_del_ok}</span>};
-            }
-        }
-        closedir $link_dir_handle;
+        rmtree('./l', {keep_root => 1, safe => 1});
+        $deletion_notif = qq{<span id="success">$text_strings{link_del_ok}</span>};
     }
 
     if (defined $cgi_query_get->param('mail')){
@@ -263,7 +257,7 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
             close $in or die;
             chmod(0755,$link_path) or die;
             close $out or die;
-            $linkgen_notif = qq{<span id="success">$text_strings{link_ok_for} $link_asker: </span><br><a href="$href">$href</a>};          
+            $linkgen_notif = qq{<span id="success">$text_strings{link_ok_for} $link_asker: </span><br><a target="_blank" rel="noopener noreferrer nofollow" href="$href">$href</a>};          
         }
         else{
             $mailisok_notif = qq{<span id="failure">$text_strings{addr} $link_asker $text_strings{addr_nok}.</span>};
@@ -285,7 +279,7 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
                 if (Email::Valid->address($link_asker)){
                     push @created_links,
                     qq{<tr>
-                        <td><a href="/cgi-bin/l/$linkfile_fn">$text_strings{here}</a></td>
+                        <td><a target="_blank" rel="noopener noreferrer nofollow" href="/cgi-bin/l/$linkfile_fn">$text_strings{here}</a></td>
                         <td><a href="mailto:$link_asker?subject=$text_strings{mailto_subject}&body=$text_strings{mailto_body} http://$hostname/cgi-bin/l/$linkfile_fn">$link_asker</a></td>
                         <td>
                             <form method="POST">
@@ -327,7 +321,7 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
                 <form method="POST">
                     $hidden_pwfield
                     $text_strings{link_asker_field_label}<br>
-                    <input tabindex="1" type="text" name="mail">
+                    <input id="mailfield" tabindex="1" type="text" name="mail">
                     <input id="genlinkbtn" tabindex="2" type="submit" value="$text_strings{create_link_btn}">
                 </form>},
                 NotifIfDefined($mailisok_notif),

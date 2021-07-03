@@ -106,7 +106,7 @@ print qq{<!DOCTYPE html>
        <title>{link_web_title}</title>
     </head>
     <body>
-        <p>{type_msg_below}:</p>
+        <p id="msgbelow">{type_msg_below}:</p>
             <form method="POST">
                 <textarea id="msg" wrap="off" cols="50" rows="30" name="msg"></textarea><br>
 };
