@@ -97,6 +97,8 @@ server {
     add_header X-Frame-Options DENY;
     add_header Access-Control-Allow-Origin https://$server_name;
     add_header Vary Origin; # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin#cors_and_caching
+    
+    client_max_body_size 100m;
 }
 ```
 You can also tune the `WWWDOMAIN` and `NGINXCONFDIR` variable in your `config.mk` to have it generated for you when running `make`.
