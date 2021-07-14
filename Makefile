@@ -29,7 +29,7 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
 		exit 1; \
 	fi
 	@if test -n '$(_GPGID)'; then \
-	    printf "Your GPG 0xlong id is ${BOLD}$(_GPGID)${STOP}\n";\
+	    printf "Your GPG 0xlong id is ${BOLD}0x$(_GPGID)${STOP}\n";\
 		sed -e 's|gpgid_goes_here|0x$(_GPGID)|g' -i link-tmpl.cgi;\
 	else \
 	    printf "${RED}It seems that no public GPG key is tied to ${BOLD}$(MYMAIL_ADDR)${STOP}\n";\
@@ -69,6 +69,13 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
 		sed -e 's|link_template_path_goes_here|$(LINK_TEMPLATE_PATH)|g' -i  gpigeon.cgi; \
 	else \
 		printf "\n${RED}The path for the link template wasn't set in your config.mk. Fix that.${STOP}" ;\
+		exit 1;\
+	fi
+	@if test -n '$(UPLOAD_TMPDIR)'; then \
+		printf "\nUploaded files will be temporary stored at ${BOLD}$(UPLOAD_TMPDIR)${STOP}"; \
+		sed -e 's|tmp_dir_goes_here|$(UPLOAD_TMPDIR)|g' -i  gpigeon.cgi; \
+	else \
+		printf "\n${RED}The temporary directory for uploaded files wasn't set in your config.mk. Fix that.${STOP}" ;\
 		exit 1;\
 	fi
 	

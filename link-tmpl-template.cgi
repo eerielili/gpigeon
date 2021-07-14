@@ -1,6 +1,5 @@
 #! /usr/bin/perl -wT
 my $linkuser = q{link_user};
-my $linkfilename = q{link_filename};
 # link-tmpl.cgi : self-destructing message form to send yourself GPG
 # encrypted messages. Part of gpigeon.
 
@@ -21,17 +20,11 @@ my $linkfilename = q{link_filename};
 
 use warnings;
 use strict;
-use GPG;
 use CGI qw(param);
 
-$ENV{'PATH'}="/usr/bin";
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
-
-sub EscapeArobase {
-    my $escapedmailaddress = shift;
-    $escapedmailaddress =~ s/@/\\@/;
-    return $escapedmailaddress;
-}
+$ENV{'PATH'}="/usr/bin";
+$ENV{TMPDIR} = q{tmp_dir_goes_here};
 
 my $HAS_MAILSERVER = q{has_mailserver_goes_here};
 my $msg_form_char_limit = q{msg_char_limit_goes_here};
@@ -45,50 +38,82 @@ my $GPG_HOMEDIR = q{gpg_homedir_goes_here};
 my $cgi_query_get = CGI->new;
 my $msg_form = $cgi_query_get->param('msg');
 my $length_msg_form = length $msg_form;
-my ($enc_msg, $error_processing_msg) = undef;
+my ($smtp, $enc_msg, $error_processing_msg) = undef;
 
 if (defined $length_msg_form and $length_msg_form > $msg_form_char_limit){
-    $error_processing_msg = qq{<span style="color:red"><b>Cannot send message : message length must be under $msg_form_char_limit characters.</b></span>};
+    $error_processing_msg = qq{<span id="failure"><b>Cannot send message : message length must be under $msg_form_char_limit characters.</b></span>};
 } 
 elsif (defined $length_msg_form and $length_msg_form eq 0 ){
-    $error_processing_msg = qq{<span style="color:red"><b>Cannot send message : message is empty. You can type up to $msg_form_char_limit characters.</b></span>};
+    $error_processing_msg = qq{<span id="failure"><b>Cannot send message : message is empty. You can type up to $msg_form_char_limit characters.</b></span>};
 }
 else {
     if (defined $length_msg_form and $ENV{REQUEST_METHOD} eq 'POST'){
+        use MIME::Entity;
+        use Mail::GPG;
         $msg_form =~ tr/\r//d;
-        my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir => $GPG_HOMEDIR);
+        my $gpgmail  = Mail::GPG->new(
+            default_key_id => $mymailaddr,
+            gnupg_hash_init => {homedir => $GPG_HOMEDIR},
+            debug => 0,
+            no_strict_7bit_encoding => 1,
+        );
+        my $mimentity = MIME::Entity->build(
+            From => $mailsender,
+            To => $mailaddr,
+            Subject => '.',
+            Data => ["This is a message from $linkuser:\n\n$msg_form"],
+            Charset => 'utf-8',
+        );
+        
         $enc_msg = $gpg->encrypt("$linkuser:\n\n$msg_form", $mymail_gpgid) or die $gpg->error();
 
-        if ($HAS_MAILSERVER){
-            use Mail::Sendmail;
-            my %mail = ( To => "$mymailaddr",
-            From => "$mailsender",
-            Subject => '.',
-            Message => "$enc_msg\n" 
+        if (my $fh = $cgi_query_get->upload('file')){
+            my $fullfn = $cgi_query_get->param('file');
+            $fullfn =~ s/^[a-zA-Z_0-9\-\.]/_/g;
+            $fullfn =~ s/__+/_/g;
+            my $fpath = $cgi_query_get->tmpFileName( $fh );
+            my $fsize = -s $fpath;
+            $CGI::POST_MAX = 1024*1024*100; # 100Mo limit
+            if ($fsize > $CGI::POST_MAX){
+                die 'ERROR: File is too big (>100MB).';
+            }
+#           my $mimetype = $cgi_query_get->uploadInfo( $fh )->{'Content-Type'};
+#           my $lengthf = $cgi_query_get->uploadInfo( $fh )->{'Content-Length'};
+            if (not $mimetype =~ /^([\w]+)\/([\w]+)$/){
+                die 'Unrecognized MIME type of uploaded file.';
+            }
+            $mimentity->attach(
+                Type => $mimetype,
+                Description => 'OpenPGP encrypted attachment',
+                Encoding => 'base64',
+                Path => $fpath,
             );
-            sendmail(%mail) or die $Mail::Sendmail::error;
+
+        }
+
+        my $mimentity_encrypted = $gpgmail->mime_encrypt(
+            entity => $mimentity,
+        );
+
+        my $puremime = $mimentity_encrypted->as_string;
+
+        use Net::SMTP;
+        use Net::SMTPS;
+        if ($HAS_MAILSERVER){
+            $smtp = Net::SMTP->new( Host => 'localhost', Debug => 0);
         }
         else {
-            use Net::SMTP;
-            use Net::SMTPS;
-            my $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
-            my $mymailaddr_escaped = EscapeArobase($mymailaddr);
-            my $mailsender_escaped = EscapeArobase($mailsender);
-
+            $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0);
             $smtp->auth($mailsender, $mailsender_pw) or die;
-            $smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
-            if ($smtp->to($mymailaddr)){
-                $smtp->data();
-                $smtp->datasend("From: $mailsender_escaped\n");
-                $smtp->datasend("To: $mymailaddr_escaped\n");
-                $smtp->datasend("Subject: .\n");
-                $smtp->datasend("\n");
-                $smtp->datasend("$enc_msg\n");
-                $smtp->dataend();
-            }
-            else {
-                die $smtp->message();
-            }
+        }
+        $smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
+        if ($smtp->to($mymailaddr)){
+            $smtp->data($puremime);
+            $smtp->dataend();
+            $smtp->quit();
+        }
+        else {
+            die $smtp->message();
         }
 
         unlink $linkfilename;
@@ -114,8 +139,11 @@ if (defined $error_processing_msg){
     printf $error_processing_msg;
 }
 printf q{
-                <br>
-               <input type="submit" value="{link_send_btn}">
+               <label for="filechoice" id="msgbelow">
+                    (Optional) file upload: 
+                    <input id="filechoice" type="file" name="file">
+               </label>
+               <input id="sendbtn" type="submit" value="{link_send_btn}">
             </form>
     </body>
 </html> };
