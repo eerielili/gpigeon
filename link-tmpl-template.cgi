@@ -148,7 +148,7 @@ print qq{<!DOCTYPE html>
     </head>
     <body>
         <p id="msgbelow">{type_msg_below}:</p>
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <textarea id="msg" wrap="off" cols="50" rows="30" name="msg"></textarea><br>
 };
 if (defined $error_processing_msg){
