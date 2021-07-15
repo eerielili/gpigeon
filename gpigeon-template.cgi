@@ -248,7 +248,6 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
             open my $out, '>', $link_path or die "Can't write to link file: $!";
             while( <$in> ) {
                 s/{link_user}/{$link_asker}/g;
-                s/{link_filename}/{$generated_form_filename}/g;
                 s/{link_web_title}/$text_strings{link_web_title}/g;
                 s/{link_send_btn}/$text_strings{link_send_btn}/g;
                 s/{type_msg_below}/$text_strings{type_msg_below}/g;

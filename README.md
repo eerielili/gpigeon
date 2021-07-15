@@ -19,6 +19,7 @@ Features
     keep track of what has been created. You can also delete link
     individually, or all at once.
 - No javascript used at the moment.
+- If needed, you can attach a file. It'll be encrypted alongside the message. **100MB limit by default**.
 
 Dependencies
 ============
@@ -30,11 +31,11 @@ You will need perl and the following modules and my perl version is **v5.34.0**,
 - CGI::Carp
 - CGI::Cookies
 - Crypt::Argon2
-- GPG
 - Net:SSLeay
 - Net::SMTP
 - Net::SMTPS
-- Email::Valid 
+- Email::Valid
+- Mail::GPG
 - String::Random 
 
 Having a webserver with CGI support or a separate CGI engine is needed. I'm using nginx and fcgiwrap.
