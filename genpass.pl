@@ -29,12 +29,13 @@ my $opt = $ARGV[0];
 sub FillConfigMk { 
         my $hash = shift;
         $hash =~ s/\$/\\044/g;
+        $hash =~ s/\\/\\\\/g;
         my $mkconfig = 'config.mk';
         if (-e $mkconfig){
             open my $in, '<', $mkconfig or die "$!";
                 open my $out, '>', "$mkconfig.tmp" or die "$!";
                 while (<$in>){
-                   s/ARGON2ID_HASH =.*/ARGON2ID_HASH = `printf "$hash"`/gi; 
+                   s/ARGON2ID_HASH =.*/ARGON2ID_HASH =$hash/gi; 
                    print $out $_;
                 }
                 close $out;

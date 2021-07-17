@@ -41,6 +41,14 @@ h1, #msgbelow{
     border:1px solid black;
 }
 
+#logoutbtn {
+    display: inline;
+    float:right;
+    top: 0;
+    right: 0;
+    position:absolute;
+}
+
 #msg{
     display:block;
     margin-left:auto;
@@ -65,7 +73,7 @@ h1, #msgbelow{
 	color:red;
 }
 
-#loginbox {
+#loginbox #loginerr{
     border:none;
     margin-right:auto;
     margin-left:auto
@@ -116,6 +124,10 @@ h1, #msgbelow{
         font-size:0.8em;
     }
 
+    h1{
+        font-size:1.5em;
+    }
+
 	#linkstable th,td{
         padding:3px;
     }
@@ -130,6 +142,13 @@ h1, #msgbelow{
 		padding: 2px;
 		line-height:15px;
 	}
+
+    #logoutbtn {
+        float:none;
+        top:unset;
+        right:unset;
+        position:revert;
+    }
 
     #mailfield{
         padding: 3px;

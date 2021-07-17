@@ -26,19 +26,21 @@ use CGI qw(param);
 use CGI::Cookie;
 use CGI::Carp qw(fatalsToBrowser);
 
+delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
+$ENV{'PATH'} = q{bin_path_goes_here};
 my $uagent = $ENV{HTTP_USER_AGENT};
 my $rIP = $ENV{REMOTE_ADDR};
 my $hostname = $ENV{'SERVER_NAME'};
 
 sub ValidCookie {
     my $client_login_cookie = shift;
+    if (not defined $client_login_cookie){
+        return;
+    }
     my $dir = shift;
     my $filename = $client_login_cookie->value;
     my $login_cookiefile = "$dir/$filename.txt";
 
-    if (not defined $client_login_cookie){
-        return;
-    }
     if ($filename =~ /^([\w]+)$/){
 	    $filename = $1;
     }
@@ -48,9 +50,9 @@ sub ValidCookie {
 
     if (-e $login_cookiefile){ 
         open my $in, '<', $login_cookiefile or die "can't read file: $!";
-        $rip_line = readline $in;
-        $ua_line = readline $in;
-        $cookie_line = readline $in;
+        my $rip_line = readline $in;
+        my $ua_line = readline $in;
+        my $cookie_line = readline $in;
         close $in;
         chomp ($rip_line, $ua_line);
         if (not defined $cookie_line){
@@ -101,12 +103,6 @@ sub LoginCookieGen {
     }
 }
 
-sub EscapeArobase {
-    my $escapedmailaddress = shift;
-    $escapedmailaddress =~ s/@/\\@/;
-    return $escapedmailaddress;
-}
-
 sub UntaintCGIFilename {
     my $filename = shift;
     if ($filename =~ /^([-\@\w.\/]+)$/) {
@@ -119,24 +115,12 @@ sub UntaintCGIFilename {
     return $filename;
 }
 
-sub NotifIfDefined{
-    my $notif = shift;
-    if (defined $notif){
-        return $notif;
-    }
-    else{
-        return '<!--undef notif-->';
-    }
-}
-
-my ($linkgen_notif, $link_asker, $mailisok_notif, $deletion_notif, 
-    $checkedornot, $hidden_pwfield, $id_cookie, 
+my ( $link_asker, $checkedornot, $hidden_pwfield, $id_cookie, 
     $delete_id_cookie, $idval, $refresh_form) = undef;
+my $linkgen_notif = my $mailisok_notif = my $deletion_notif = my $login_notif = '<!-- undef notif -->';
 my @created_links = ();
-delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
-$ENV{'PATH'} = '/usr/bin';
 
-my $argon2id_hash       = q{argon2id_hash_goes_here};
+my $argon2id_hash       = qq{argon2id_hash_goes_here};
 my $cookies_dir         = q{cookies_dir_goes_here};
 my $link_template_path  = q{link_template_path_goes_here};
 
@@ -148,24 +132,22 @@ my %text_strings = (
     create_link_btn => 'Generate link', 
     delete_link_btn_text => 'Delete',
     delete_links_btn_text => 'Delete all links',
-    logout_btn_text => 'Logout',
     here => 'here',
+    landingpage_title => 'GPIGEON - Login',
     link_asker_field_label => q{Asker's mail :},
-    link_web_title => 'One time GPG messaging form',
     link_del_ok => 'Successful removal !',
-    link_legend_textarea =>'Type your message below :',
-    link_send_btn => 'Send',
     link_ok_for => 'Generated a link for',
     link_del_failed => 'Deletion failed and here is why : ',
+    loginbtn => 'Log in',
+    logout_btn_text => 'Logout',
     mailto_body => 'Your link is ',
     mailto_subject => 'Link to your one time GPG messaging form',
+    mainpage_title => 'GPIGEON - Main',
     notif_login_failure => 'Cannot login. Check if your username and password match.',
     refresh_btn_text => 'Refresh',
-    type_msg_below => 'Type your message below',
     theader_link => 'Link', 
     theader_for => 'For', 
     theader_deletion => 'Deletion', 
-    web_title => 'GPIGEON.CGI: generate one time GPG messaging links !', 
     web_greet_msg => 'Hi and welcome.', 
 );
 my $cgi_query_get = CGI->new;
@@ -238,7 +220,6 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
 
         if ( Email::Valid->address($link_asker) ){
             $mailisok_notif = qq{<span id="success">$text_strings{addr} $link_asker $text_strings{addr_ok}</span>};
-            my $escaped_link_asker = EscapeArobase($link_asker);
             my $str_rand_obj = String::Random->new;
             my $generated_form_filename = $str_rand_obj->randregex('\w{64}') . '.cgi';
             my $href = "https://$hostname/cgi-bin/l/$generated_form_filename";
@@ -248,9 +229,6 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
             open my $out, '>', $link_path or die "Can't write to link file: $!";
             while( <$in> ) {
                 s/{link_user}/{$link_asker}/g;
-                s/{link_web_title}/$text_strings{link_web_title}/g;
-                s/{link_send_btn}/$text_strings{link_send_btn}/g;
-                s/{type_msg_below}/$text_strings{type_msg_below}/g;
                 print $out $_;
             }
             close $in or die;
@@ -306,9 +284,10 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
                 <link rel="stylesheet" type="text/css" href="/styles.css">
                 <meta http-equiv="content-type" content="text/html;charset=UTF-8">
                 <meta charset="UTF-8">
-                <title>$text_strings{web_title}</title>
+                <title>$text_strings{mainpage_title}</title>
             </head>
             <body>
+                <h1>$text_strings{mainpage_title}</h1>
                 <p>$text_strings{web_greet_msg}</p>
                 <form method="GET">
                     <input type="hidden" name="logout" value="1">
@@ -322,18 +301,18 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
                     $text_strings{link_asker_field_label}<br>
                     <input id="mailfield" tabindex="1" type="text" name="mail">
                     <input id="genlinkbtn" tabindex="2" type="submit" value="$text_strings{create_link_btn}">
-                </form>},
-                NotifIfDefined($mailisok_notif),
-                '<br>',
-                NotifIfDefined($linkgen_notif),
-                qq{<hr>
+                </form>
+                $mailisok_notif
+                <br>
+                $linkgen_notif
+                <hr>
                 <form method="POST">
                     $hidden_pwfield
                     <input type="hidden" name="supprtout">
                      <input id="deleteallbtn" type="submit" value="$text_strings{delete_links_btn_text}">
-                </form>},
-                NotifIfDefined($deletion_notif),
-                qq{<table>
+                </form>
+                $deletion_notif
+                <table>
                     <tr>
                         <th>$text_strings{theader_link} &#128279;</th>
                         <th>$text_strings{theader_for} &#128231;</th>
@@ -345,5 +324,48 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
         </html>};
 }
 else{
-    print "Location: /\n\n";
+    if (not $logout and defined $id_cookie){
+        $login_notif = q{<span id="failure">You got a cookie problem.<br>
+        <b>Clean them and log again</b></span>};
+    }
+    if (length($pw) > 0){
+        $login_notif = q{<span id="failure">Your typed password seems<br>
+        to be incorrect.<br>Try again.</span>};
+    }
+    
+    print "Content-type: text/html\n\n",
+qq{<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="utf-8">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="/styles.css">
+<title>$text_strings{landingpage_title}</title>
+</head>
+<body>
+	<h1>$text_strings{landingpage_title}</h1>
+<form action="/cgi-bin/gpigeon.cgi" method="POST">
+  <table id="loginbox">
+	  <tbody>
+		  <tr>
+			  <td>Password :</td> 		  
+			  <td><input type="password" name="password"></td>
+		  </tr>
+          <tr>
+                <td></td>
+                <td id="loginerr">$login_notif</td>
+          </tr>
+		  <tr id="authbtn">
+			  <td></td>
+			  <td><input type="submit" value="$text_strings{loginbtn}"></td>
+		  </tr>
+	  </tbody>
+  </table>
+ </form>
+
+<p><a href="http://git.les-miquelots.net/gpigeon"
+	   title="gpigeon download link">Source code here.</a> It is similar to <a href="https://hawkpost.co/">hawkpost.co</a>.</p>
+
+</body>
+</html>};
 }
