@@ -210,8 +210,9 @@ my %text_strings = (
     delete_link_btn_text => 'Delete',
     delete_links_btn_text => 'Delete all links',
     disconnect_btn_text => 'Disconnect',
-    logout_btn_text => 'Logout',
     here => 'here',
+    landingpage_title => 'GPIGEON - Log in',
+    logout_btn_text => 'Logout',
     loginbtn => 'Log in',
     link_asker_field_label => "Asker's mail :",
     link_del_ok => 'Successful removal !',
@@ -228,7 +229,7 @@ my %text_strings = (
     theader_for => 'For', 
     theader_deletion => 'Deletion',
     username_label => 'Username',
-    web_title => 'GPIGEON.CGI: generate one time GPG messaging links !', 
+    web_title => 'GPIGEON.CGI - Main', 
     web_greet_msg => 'Hi and welcome. What will you do today ?', 
 );
 
@@ -411,6 +412,7 @@ if($loginok){
                 <title>$text_strings{web_title}</title>
             </head>
             <body>
+                <h1>$text_strings{web_title}</h1>
                 <p>$text_strings{web_greet_msg}</p>
                 <form method="GET">
                     <input type="hidden" name="disconnect" value="1">
@@ -471,7 +473,7 @@ qq{<!DOCTYPE html>
 <tbody>
  <tr>
    <td>$text_strings{username_label} :</td>
-   <td><input type="password" name="password"></td>
+   <td><input type="text" name="username"></td>
  </tr>
  <tr>
    <td>$text_strings{password_label} :</td>

@@ -1,4 +1,5 @@
 #! /usr/bin/perl -T
+my $linkuser = q{link_user};
 # link-tmpl.cgi : self-destructing message form to send yourself GPG
 # encrypted messages. Part of gpigeon.
 
@@ -16,7 +17,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Copyright (c) 2020-2021, Miquel Lionel <lionel@les-miquelots.net>
-my $linkuser = q{link_user};
 use warnings;
 use strict;
 use CGI qw(param);
@@ -37,6 +37,7 @@ sub GetRFC822Date {
 
 my $HAS_MAILSERVER = q{has_mailserver_goes_here};
 my $msg_form_char_limit = q{msg_char_limit_goes_here};
+my $max_mb = 100;
 my $mailaddr = q{user_mailaddr_goes_here};
 my $mailsender = q{sender_addr_goes_here};
 my $mailsender_smtp = q{smtp_domain_goes_here};
@@ -48,7 +49,6 @@ my $msg_form = $cgi_query_get->param('msg');
 my $length_msg_form = length $msg_form;
 my ($smtp, $enc_msg) = undef;
 my $form_error_notif = '<!-- undef notif -->';
-my $max_mb = 100;
 $CGI::POST_MAX = 1024*1024*$max_mb; # 100MBytes
 my $fupload_limit = $CGI::POST_MAX;
 
@@ -86,7 +86,7 @@ else {
             $fullfn =~ s/__+/_/g;
             my $fpath = $cgi_query_get->tmpFileName($fh) or die "can't get uploaded file name: $!";
             my $fsize = -s $fpath;
-            if ($fsize > $fsize_limit){
+            if ($fsize > $fupload_limit){
                 die 'ERROR: File is too big (>100MB).'; # I don't think we'll se this error, it'll return 413 instead
             }
 
