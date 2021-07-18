@@ -27,6 +27,8 @@ use CGI::Cookie;
 use CGI::Carp qw(fatalsToBrowser);
 use File::Path qw(mkpath rmtree);
 
+delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
+$ENV{'PATH'} = q{bin_path_goes_here};
 my $rIP = $ENV{REMOTE_ADDR};
 my $uagent  = $ENV{HTTP_USER_AGENT};
 
@@ -173,7 +175,7 @@ sub LoginCookieGen {
             -samesite => 'Strict',
        ) or die "Can't create cookie $!";
        open my $out, '>', $cookiefile or die "Can't write to $cookiefile: $!";
-           print $out "$rIP\n$ua\n$new_magic_cookie\n$new_userid_cookie";
+           print $out "$rIP\n$uagent\n$new_magic_cookie\n$new_userid_cookie";
        close $out;
        print "Set-Cookie: $new_magic_cookie\n";
        print "Set-Cookie: $new_userid_cookie\n";
@@ -192,22 +194,9 @@ sub UntaintCGIFilename {
     return $filename;
 }
 
-sub NotifIfDefined{
-    my $notif = shift;
-    if (defined $notif){
-        return $notif;
-    }
-    else{
-        return '<!--undef notif-->';
-    }
-}
-
-delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
-$ENV{'PATH'} = '/usr/bin';
 my $hostname = $ENV{'SERVER_NAME'};	
 
 my $db_path             = q{db_path_goes_here};
-my $argon2id_hash       = q{argon2id_hash_goes_here};
 my $cookiesdir          = q{cookies_dir_goes_here};
 my $link_template_path  = q{link_template_path_goes_here};
 
@@ -216,37 +205,40 @@ my %text_strings = (
     addr_ok => 'is valid!', 
     addr_nok => 'is not valid !',
     addr_unknown => 'Unknown',
-    create_link_btn => 'Generate link', 
+    create_link_btn => 'Generate link',
+    cookie_problems =>'You got a cookie problem.<br> <b>Clean them and log in again</b>',
     delete_link_btn_text => 'Delete',
     delete_links_btn_text => 'Delete all links',
     disconnect_btn_text => 'Disconnect',
     logout_btn_text => 'Logout',
     here => 'here',
+    loginbtn => 'Log in',
     link_asker_field_label => "Asker's mail :",
-    link_web_title => 'One time GPG messaging form',
     link_del_ok => 'Successful removal !',
     link_legend_textarea =>'Type your message below :',
-    link_send_btn => 'Send',
     link_ok_for => 'Generated a link for',
     link_del_failed => 'Deletion failed and here is why : ',
     link_generated_ok => "Here's the link",
     mailto_body => 'Your link is ',
     mailto_subject => 'Link to your one time GPG messaging form',
-    notif_login_failure => 'Cannot login. Check if your username and password match.',
+    incorrect_ids => 'Username/password combination<br> is incorrect.<br>Try again.',
+    password_label => 'Password',
+    refresh_btn => 'Refresh',
     theader_link => 'Link', 
     theader_for => 'For', 
-    theader_deletion => 'Deletion', 
+    theader_deletion => 'Deletion',
+    username_label => 'Username',
     web_title => 'GPIGEON.CGI: generate one time GPG messaging links !', 
-    web_greet_msg => 'Hi and welcome.', 
+    web_greet_msg => 'Hi and welcome. What will you do today ?', 
 );
 
 my $cgi_query_get = CGI->new;
 my $username = $cgi_query_get->param('username');
 my $pass = $cgi_query_get->param('password');
 my $disconnect = $cgi_query_get->param('disconnect');
-my ($linkgen_notif, $mailisok_notif, $deletion_notif, $checkedornot,
-    $session, $hidden_loginfield, $magic_cookie, 
+my ( $checkedornot, $hidden_loginfield, $magic_cookie, 
     $uid_cookie, $idval, $refresh_form, $userid) = undef;
+my $linkgen_notif = my $mailisok_notif = my $deletion_notif = my $login_notif = '<!-- undef notif -->';
 my @created_links = ();
 my %cur_cookies = CGI::Cookie->fetch;
 $uid_cookie = $cur_cookies{'uid'};
@@ -259,12 +251,12 @@ if (not defined $magic_cookie){ # cookie is not set
 
     $refresh_form = qq{<form method="POST">
                    $hidden_loginfield
-                   <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn_text}">
+                   <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn}">
                 </form>};
 }else{
     $hidden_loginfield = qq{<!-- undef -->};
     $refresh_form = qq{<form method="GET">
-                   <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn_text}">
+                   <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn}">
                 </form>};
    $idval = $magic_cookie->value;
    if ($idval =~ /^([\w]+)$/){
@@ -319,7 +311,6 @@ if($loginok){
     $userid = $loginok; 
     LoginCookieGen($userid, $magic_cookie, $cookiesdir);
     my $user_mailaddr = DbGetLine($dbh, qq{SELECT mail from pigeons where userid='$userid';});
-    my $gpgid = DbGetLine($dbh, qq{SELECT gpgfp from pigeons where userid='$userid';});
     my $nick = DbGetLine($dbh, qq{SELECT name from pigeons where userid='$userid';});
     if (not -d "./l/$userid"){
         mkpath("./l/$userid");
@@ -356,14 +347,7 @@ if($loginok){
             open my $out, '>', $LINK_PATH or die "Can't write to link file: $!";
             while( <$in> ) {
                 s/{link_user}/{$link_asker}/g;
-                s/{gpgid_goes_here}/{$gpgid}/g;
-                s/{link_filename}/{$GENERATED_FORM_FILENAME}/g;
-		s/{user_mailaddr_goes_here}/{$user_mailaddr}/g;
-                s/{msg_too_long}/$text_strings{msg_too_long}/g;
-                s/{msg_empty}/$text_strings{msg_empty}/g;
-                s/{link_web_title}/$text_strings{link_web_title}/g;
-                s/{link_send_btn}/$text_strings{link_send_btn}/g;
-                s/{type_msg_below}/$text_strings{type_msg_below}/g;
+                s/{user_mailaddr_goes_here}/{$user_mailaddr}/g;
                 print $out $_;
             }
             close $in or die;
@@ -427,7 +411,7 @@ if($loginok){
                 <title>$text_strings{web_title}</title>
             </head>
             <body>
-                <p>$text_strings{web_greet_msg} <b>$nick</b></p>
+                <p>$text_strings{web_greet_msg}</p>
                 <form method="GET">
                     <input type="hidden" name="disconnect" value="1">
 		            <input id="logoutbtn" type="submit" value="$text_strings{disconnect_btn_text}">
@@ -438,20 +422,20 @@ if($loginok){
                 <form method="POST">
                     $hidden_loginfield
                     Mail de la personne:<br>
-                    <input id="mailfied" tabindex="1" type="text" name="mail">
+                    <input id="mailfield" tabindex="1" type="text" name="mail">
                     <input id="genlinkbtn" tabindex="2" type="submit" value="$text_strings{create_link_btn}">
-                </form>},
-                NotifIfDefined($mailisok_notif),
-                '<br>',
-                NotifIfDefined($linkgen_notif),
-                qq{<hr>
+                </form>
+                $mailisok_notif
+                <br>
+                $linkgen_notif
+                <hr>
                 <form method="POST">
                     $hidden_loginfield
                     <input type="hidden" name="supprtout">
                     <input id="deleteallbtn" type="submit" value="$text_strings{delete_links_btn_text}">
-                </form>},
-                NotifIfDefined($deletion_notif),
-                qq{<table>
+                </form>
+                $deletion_notif
+                <table>
                     <tr>
                         <th>$text_strings{theader_link} &#128279;</th>
                         <th>$text_strings{theader_for} &#128231;</th>
@@ -464,5 +448,50 @@ if($loginok){
 }
 else{
     $dbh->disconnect;
-    print "Location: /\n\n";
+    if (not $disconnect and defined $magic_cookie){
+        $login_notif = qq{<span id="failure">$text_strings{cookie_problems}</span>};
+    }
+    if (length($pass) > 0 or length($username) > 0){
+        $login_notif = qq{<span id="failure">$text_strings{incorrect_ids}</span>};
+    }
+    
+    print "Content-type: text/html\n\n",
+qq{<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="stylesheet" type="text/css" href="/styles.css">
+<title>$text_strings{landingpage_title}</title>
+</head>
+<body>
+<h1>$text_strings{landingpage_title}</h1>
+<form action="/cgi-bin/gpigeon.cgi" method="POST">
+<table id="loginbox">
+<tbody>
+ <tr>
+   <td>$text_strings{username_label} :</td>
+   <td><input type="password" name="password"></td>
+ </tr>
+ <tr>
+   <td>$text_strings{password_label} :</td>
+   <td><input type="password" name="password"></td>
+ </tr>
+      <tr>
+            <td></td>
+            <td id="loginerr">$login_notif</td>
+      </tr>
+ <tr id="authbtn">
+   <td></td>
+   <td><input type="submit" value="$text_strings{loginbtn}"></td>
+ </tr>
+</tbody>
+</table>
+</form>
+
+<p><a href="http://git.les-miquelots.net/gpigeon"
+    title="gpigeon download link">Source code here.</a> It is similar to <a h>
+
+</body>
+</html>};
 }

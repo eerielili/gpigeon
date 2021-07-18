@@ -1,20 +1,23 @@
 # Customize below to fit your system
 
 # prefixes
-BINPREFIX = /usr/local/bin
 PREFIX = /usr/share
+BINPREFIX = /usr/bin
 WWWPREFIX = /var/www
 
 # system stuff
 WWWUSER = 'www-data'
+WWWGROUP = 'www-data'
 
 # paths
-COOKIES_DIR = $(PREFIX)/gpigeon/cookies
-_GPG_HOMEDIR = $(PREFIX)/gpigeon/gnupg
-WWWDIR = $(WWWPREFIX)/gpigeon
-LINK_TEMPLATE_PATH = $(PREFIX)/gpigeon/link-tmpl.cgi
+GPIGEON_DIR=$(PREFIX)/gpigeon
+COOKIES_DIR = $(GPIGEON_DIR)/cookies
+UPLOAD_TMPDIR = $(GPIGEON_DIR)/tmp/
+LINK_TEMPLATE_PATH = $(GPIGEON_DIR)/link-tmpl.cgi
+DB_PATH=$(GPIGEON_DIR)/the.db
+_GPG_HOMEDIR = $(GPIGEON_DIR)/gnupg
 GPIGEON_PATH = $(WWWDIR)/cgi-bin/gpigeon.cgi
-DB_PATH=$(PREFIX)/gpigeon/the.db
+WWWDIR = $(WWWPREFIX)/gpigeon
 
 # one time gpg form tuning
 MSG_FORM_CHAR_LIMIT = 3000

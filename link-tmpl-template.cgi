@@ -1,24 +1,43 @@
-#! /usr/bin/perl -wT
+#! /usr/bin/perl -T
+# link-tmpl.cgi : self-destructing message form to send yourself GPG
+# encrypted messages. Part of gpigeon.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Copyright (c) 2020-2021, Miquel Lionel <lionel@les-miquelots.net>
 my $linkuser = q{link_user};
-my $linkfilename = q{link_filename};
 use warnings;
 use strict;
-use GPG;
 use CGI qw(param);
 
-$ENV{'PATH'}="/usr/bin";
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
+$ENV{'PATH'}=q{bin_path_goes_here};
+$ENV{TMPDIR}=q{tmp_dir_goes_here};
 
-sub EscapeArobase {
-    my $escapedmailaddress = shift;
-    $escapedmailaddress =~ s/@/\\@/;
-    return $escapedmailaddress;
+sub GetRFC822Date {
+    # https://stackoverflow.com/a/40149475, Daniel VÃritÃ
+    use POSIX qw(strftime locale_h);
+    my $old_locale = setlocale(LC_TIME, "C");
+    my $date = strftime("%a, %d %b %Y %H:%M:%S %z", localtime(time()));
+    setlocale(LC_TIME, $old_locale);
+
+    return $date;
 }
 
 my $HAS_MAILSERVER = q{has_mailserver_goes_here};
 my $msg_form_char_limit = q{msg_char_limit_goes_here};
-my $mymailaddr = q{user_mailaddr_goes_here};
-my $mymail_gpgid = q{gpgid_goes_here}; #0xlong keyid form
+my $mailaddr = q{user_mailaddr_goes_here};
 my $mailsender = q{sender_addr_goes_here};
 my $mailsender_smtp = q{smtp_domain_goes_here};
 my $mailsender_port = q{smtp_port_goes_here};
@@ -27,77 +46,113 @@ my $GPG_HOMEDIR = q{gpg_homedir_goes_here};
 my $cgi_query_get = CGI->new;
 my $msg_form = $cgi_query_get->param('msg');
 my $length_msg_form = length $msg_form;
-my ($enc_msg, $error_processing_msg) = undef;
+my ($smtp, $enc_msg) = undef;
+my $form_error_notif = '<!-- undef notif -->';
+my $max_mb = 100;
+$CGI::POST_MAX = 1024*1024*$max_mb; # 100MBytes
+my $fupload_limit = $CGI::POST_MAX;
 
 if (defined $length_msg_form and $length_msg_form > $msg_form_char_limit){
-    $error_processing_msg = qq{<span id="failure"><b>Cannot send message : message length must be under $msg_form_char_limit characters.</b></span>};
+    $form_error_notif = qq{<span id="failure"><b>Cannot send message : message length must be under $msg_form_char_limit characters.</b></span>};
 } 
 elsif (defined $length_msg_form and $length_msg_form eq 0 ){
-    $error_processing_msg = qq{<span id="failure"><b>Cannot send message : message is empty. You can type up to $msg_form_char_limit characters.</b></span>};
+    $form_error_notif = qq{<span id="failure"><b>Cannot send message : message is empty. You can type up to $msg_form_char_limit characters.</b></span>};
 }
 else {
     if (defined $length_msg_form and $ENV{REQUEST_METHOD} eq 'POST'){
-        $msg_form =~ tr/\r//d; # if we dont do this,  ^M character in plain text mail
-        my $gpg =  new GPG(gnupg_path => "/usr/bin", homedir => $GPG_HOMEDIR);
-        $enc_msg = $gpg->encrypt("$linkuser:\n\n$msg_form", $mymail_gpgid) or die $gpg->error();
+        $msg_form =~ tr/\r//d; # if we dont do this,  ^M character in plain text mail will show up
+        use Mail::GPG;
 
-        if ($HAS_MAILSERVER){
-            use Mail::Sendmail;
-            my %mail = ( To => "$mymailaddr",
-            From => "$mailsender",
+        my $gpgmail =  Mail::GPG->new(
+            default_key_encrypt => $mailaddr,
+            default_key_id => $mailaddr,
+            gnupg_hash_init => {homedir=>$GPG_HOMEDIR},
+            debug => 0,
+            no_strict_7bit_encoding => 1,
+        );
+        my $rfc822date = GetRFC822Date();
+        my $mimentity =  MIME::Entity->build (
+            Date => $rfc822date,
+            From => $mailsender,
             Subject => '.',
-            Message => "$enc_msg\n"
-            );
-            sendmail(%mail) or die $Mail::Sendmail::error;
+            To => $mailaddr,
+            Data => [ "This is a message from $linkuser:\n\n$msg_form" ],
+            Charset => 'utf-8',
+        );
+        
+        if ( my $fh = $cgi_query_get->upload('fupload') ){
+            my $fullfn = $cgi_query_get->param('fupload');
+            $fullfn =~ s/[^A-Za-z_0-9\.\-]/_/g;
+            $fullfn =~ s/__+/_/g;
+            my $fpath = $cgi_query_get->tmpFileName($fh) or die "can't get uploaded file name: $!";
+            my $fsize = -s $fpath;
+            if ($fsize > $fsize_limit){
+                die 'ERROR: File is too big (>100MB).'; # I don't think we'll se this error, it'll return 413 instead
+            }
+
+            my $mimetype = $cgi_query_get->uploadInfo($fh)->{'Content-Type'};
+            if (not $mimetype =~ /^([\w]+)\/([\w]+)$/){
+                die "Unrecognized MIME type";
+            }
+
+            $mimentity->attach(
+                Type => $mimetype,
+                Description => $fullfn,
+                Encoding => 'base64',
+                Path => $fpath,
+                Filename => $fullfn,
+            ) or die "can't attach file to main MIME entity: $!";
+        }
+
+        my $encrypted_mime_blob = $gpgmail->mime_encrypt(entity => $mimentity);
+        my $encrypted_mime = $encrypted_mime_blob->as_string; 
+
+        use Net::SMTP;
+        use Net::SMTPS;
+        if ($HAS_MAILSERVER){
+            $smtp = Net::SMTP->new(Host => 'localhost'); 
         }
         else {
-            use Net::SMTP;
-            use Net::SMTPS;
-            my $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
-            my $mymailaddr_escaped = EscapeArobase($mymailaddr);
-            my $mailsender_escaped = EscapeArobase($mailsender);
-
-            $smtp->auth($mailsender, $mailsender_pw) or die;
-            $smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
-            if ($smtp->to($mymailaddr)){
-                $smtp->data();
-                $smtp->datasend("From: $mailsender_escaped\n");
-                $smtp->datasend("To: $mymailaddr_escaped\n");
-                $smtp->datasend("Subject: .\n");
-                $smtp->datasend("\n");
-                $smtp->datasend("$enc_msg\n");
-                $smtp->dataend();
-            }
-            else {
-                die $smtp->message();
-            }
+            $smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
+            $smtp->auth($mailsender, $mailsender_pw) or die "$!";
         }
 
-        unlink $linkfilename;
+        $smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
+        if ($smtp->to($mailaddr)){
+            $smtp->data($encrypted_mime);
+            $smtp->dataend();
+            $smtp->quit();
+        }
+        else {
+            die $smtp->message();
+        }
+        
+        if ($0 =~ /([\w]+)\.cgi$/){
+            unlink "$1.cgi";
+        }
         print "Location: /merci/index.html\n\n"; 
     }
 }
-print "Content-type: text/html", "\n\n";
-print qq{<!DOCTYPE html>
+print "Content-type: text/html", "\n\n",
+qq{<!DOCTYPE html>
 <html>
     <head>
        <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
        <link rel="stylesheet" type="text/css" href="/styles.css">
        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
        <meta charset="UTF-8">
-       <title>{link_web_title}</title>
+       <title>GPIGEON - Message form</title>
     </head>
     <body>
-        <p id="msgbelow">{type_msg_below}:</p>
-            <form method="POST">
+        <p id="msgbelow">Type your message below:</p>
+            <form method="POST" enctype="multipart/form-data">
                 <textarea id="msg" wrap="off" cols="50" rows="30" name="msg"></textarea><br>
-};
-if (defined $error_processing_msg){
-    printf $error_processing_msg;
-}
-printf q{
-                <br>
-               <input id="sendbtn" type="submit" value="{link_send_btn}">
+                $form_error_notif
+                <label for="filechoice" id="msgbelow">
+                    (Optional) file upload: 
+                    <input id="filechoice" type="file" name="file">
+                </label>
+               <input id="sendbtn" type="submit" value="Send">
             </form>
     </body>
-</html> };
+</html>};

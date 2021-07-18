@@ -23,7 +23,7 @@ use Term::ReadKey;
 use Crypt::Argon2 qw(argon2id_pass);
 use DBI;
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
-$ENV{'PATH'} = '/usr/bin';
+$ENV{'PATH'} = q{bin_path_goes_here};
 my $dbh_path = q{db_path_goes_here};
 my $cookiesdir = q{cookies_dir_goes_here};
 my $GNUPGHOME = q{gpgdir_goes_here};
