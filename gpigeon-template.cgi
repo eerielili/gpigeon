@@ -492,7 +492,7 @@ qq{<!DOCTYPE html>
 </form>
 
 <p><a href="http://git.les-miquelots.net/gpigeon"
-    title="gpigeon download link">Source code here.</a> It is similar to <a h>
+    title="gpigeon download link">Source code here.</a> It is similar to <a target="_blank" rel="nofollow noopener noreferrer" href="https://hawkpost.co">hawkpost.co</a>.
 
 </body>
 </html>};
