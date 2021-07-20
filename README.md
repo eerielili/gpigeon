@@ -79,6 +79,10 @@ server {
     error_log /var/log/gpigeon.log;
     index index.html index.htm;
     
+    location = / {
+        return 301 /cgi-bin/gpigeon.cgi;
+    }
+    
     location = /cgi-bin/gpigeon.cgi {
         ssi off;
         gzip off;

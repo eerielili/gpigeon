@@ -19,9 +19,10 @@
 use warnings;
 use strict;
 use File::Path qw(mkpath rmtree);
-use Crypt::Argon2 qw(argon2id_verify);
+use File::stat;
 use Email::Valid;
 use String::Random;
+use Crypt::Argon2 qw(argon2id_verify);
 use CGI qw(param);
 use CGI::Cookie;
 use CGI::Carp qw(fatalsToBrowser);
@@ -148,6 +149,7 @@ my %text_strings = (
     theader_link => 'Link', 
     theader_for => 'For', 
     theader_deletion => 'Deletion', 
+    theader_cdate => 'Created on', 
     web_greet_msg => 'Hi and welcome.', 
 );
 my $cgi_query_get = CGI->new;
@@ -245,6 +247,8 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
     while (readdir $link_dir_handle) {
         if ($_ ne '.' and $_ ne '..'){
             my $linkfile_fn = $_;
+            my $linkstats = stat("./l/$linkfile_fn");
+            my $linkcdate = scalar localtime $linkstats->mtime;
             if (open my $linkfile_handle , '<', "./l/$linkfile_fn"){
                 for (1..2){
                     $link_asker = readline $linkfile_handle;
@@ -258,6 +262,7 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
                     qq{<tr>
                         <td><a target="_blank" rel="noopener noreferrer nofollow" href="/cgi-bin/l/$linkfile_fn">$text_strings{here}</a></td>
                         <td><a href="mailto:$link_asker?subject=$text_strings{mailto_subject}&body=$text_strings{mailto_body} http://$hostname/cgi-bin/l/$linkfile_fn">$link_asker</a></td>
+                        <td>$linkcdate</td>
                         <td>
                             <form method="POST">
                                 $hidden_pwfield
@@ -312,11 +317,12 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
                      <input id="deleteallbtn" type="submit" value="$text_strings{delete_links_btn_text}">
                 </form>
                 $deletion_notif
-                <table>
+                <tablei id="linkstable">
                     <tr>
-                        <th>$text_strings{theader_link} &#128279;</th>
-                        <th>$text_strings{theader_for} &#128231;</th>
-                        <th>$text_strings{theader_deletion} &#128465;</th>
+                        <th>&#x1f517; $text_strings{theader_link}</th>
+                        <th>&#x1f4e7; $text_strings{theader_for}</th>
+                        <th>&#x1f4c5; $text_strings{theader_cdate}</th>
+                        <th>&#10060; $text_strings{theader_deletion}</th>
                     </tr>
                     @created_links
                 </table>
@@ -364,7 +370,7 @@ qq{<!DOCTYPE html>
  </form>
 
 <p><a href="http://git.les-miquelots.net/gpigeon"
-	   title="gpigeon download link">Source code here.</a> It is similar to <a href="https://hawkpost.co/">hawkpost.co</a>.</p>
+	   title="gpigeon download link">Source code here.</a> It is similar to <a target="_blank" rel="noopener nofollow noreferrer" href="https://hawkpost.co/">hawkpost.co</a>.</p>
 
 </body>
 </html>};
