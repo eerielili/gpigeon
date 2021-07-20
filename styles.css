@@ -19,6 +19,8 @@ h1, #msgbelow{
     padding:10px;
     font-size:110%;
     margin:0;
+    border: 3px solid black;
+    border-bottom:none;
 }
 
 #linkstable td{

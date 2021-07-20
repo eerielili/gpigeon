@@ -31,14 +31,14 @@ You will need perl and the following modules and my perl version is **v5.34.0**,
 
 - CGI
 - CGI::Carp
-- CGI::Cookies
+- CGI::Cookie
 - Crypt::Argon2
 - DBI
 - DBD::SQLite
-- Email::Valid 
-- File::Path (should be already here by default in recent perl installs)
-- GPG
-- HTML::Entities
+- Email::Valid
+- Mail::GPG
+- MIME::Entity
+- File::Path and File::stat (available by default in recent perl installs)
 - Net:SSLeay
 - Net::SMTP
 - Net::SMTPS
@@ -86,7 +86,11 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/ggon.example.com/privkey.pem;
     error_log /var/log/gpigeon.log;
     index index.html index.htm;
-    
+
+    location = / {
+        return 301 /cgi-bin/gpigeon.cgi;
+    }
+
     location = /cgi-bin/gpigeon.cgi {
         ssi off;
         gzip off;

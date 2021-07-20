@@ -18,14 +18,15 @@
 
 use warnings;
 use strict;
-use Crypt::Argon2 qw(argon2id_verify);
-use Email::Valid;
-use String::Random;
 use DBI;
+use Email::Valid;
 use CGI qw(param);
 use CGI::Cookie;
 use CGI::Carp qw(fatalsToBrowser);
+use Crypt::Argon2 qw(argon2id_verify);
 use File::Path qw(mkpath rmtree);
+use File::stat;
+use String::Random;
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 $ENV{'PATH'} = q{bin_path_goes_here};
@@ -228,6 +229,7 @@ my %text_strings = (
     theader_link => 'Link', 
     theader_for => 'For', 
     theader_deletion => 'Deletion',
+    theader_cdate => 'Created on',
     username_label => 'Username',
     web_title => 'GPIGEON.CGI - Main', 
     web_greet_msg => 'Hi and welcome. What will you do today ?', 
@@ -367,6 +369,8 @@ if($loginok){
     while (readdir $link_dir_handle) {
         if ($_ ne '.' and $_ ne '..'){
             my $linkfile_fn = $_;
+            my $linkstats = stat("./l/$userid/$linkfile_fn");
+            my $linkcdate = scalar localtime $linkstats->mtime;
             my $link_asker = undef;
             if (open my $linkfile_handle , '<', "./l/$userid/$linkfile_fn"){
                 for (1..2){
@@ -384,6 +388,7 @@ if($loginok){
                 qq{<tr>
                     <td><a href="/cgi-bin/l/$userid/$linkfile_fn" target="_blank" rel="noopener noreferrer nofollow">ici</a></td>
                     <td><a href="mailto:$link_asker?subject=$text_strings{mailto_subject}&body=$text_strings{mailto_body} http://$hostname/cgi-bin/l/$userid/$linkfile_fn">$link_asker</a></td>
+                    <td>$linkcdate</td>
                     <td>
                         <form method="POST">
                     	    $hidden_loginfield
@@ -437,11 +442,12 @@ if($loginok){
                     <input id="deleteallbtn" type="submit" value="$text_strings{delete_links_btn_text}">
                 </form>
                 $deletion_notif
-                <table>
+                <table id="linkstable">
                     <tr>
-                        <th>$text_strings{theader_link} &#128279;</th>
-                        <th>$text_strings{theader_for} &#128231;</th>
-                        <th>$text_strings{theader_deletion} &#128465;</th>
+                        <th>&#x1f517; $text_strings{theader_link}</th>
+                        <th>&#x1f4e7; $text_strings{theader_for} </th>
+                        <th>&#x1f4c5; $text_strings{theader_creationdate}</th>
+                        <th>&#10060; $text_strings{theader_deletion}</th>
                     </tr>
                     @created_links
                 </table>
