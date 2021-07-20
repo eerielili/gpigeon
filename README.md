@@ -26,17 +26,21 @@ Dependencies
 
 You will need perl and the following modules and my perl version is **v5.34.0**, YMMV:
 
-- HTML::Entities
 - CGI
 - CGI::Carp
-- CGI::Cookies
+- CGI::Cookie
 - Crypt::Argon2
+- DBI
+- DBD::SQLite
+- Email::Valid
+- Mail::GPG
+- MIME::Entity
+- File::Path and File::stat (available by default in recent perl installs)
 - Net:SSLeay
 - Net::SMTP
 - Net::SMTPS
-- Email::Valid
-- Mail::GPG
 - String::Random 
+- Term::ReadKey
 
 Having a webserver with CGI support or a separate CGI engine is needed. I'm using nginx and fcgiwrap.
 
