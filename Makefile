@@ -2,11 +2,57 @@
 
 BOLD=\033[01m
 RED=\033[31m
+UDRL=\033[4m
 STOP=\033[0m
 include config.mk
 
-gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
-	$(MAKE) gpigeonctl;
+gpigeon: gpigeon-template.cgi link-tmpl-template.cgi invites-tmpl-template.cgi
+	@if test -z '$(PREFIX)'; then \
+		printf "\n$(RED)No $(BOLD)\u0024PREFIX$(STOP)$(RED) variable defined in config.mk.\n";\
+		printf "Look into config.def.mk for the defaults and fix that in your config.mk.$(STOP)\n";\
+		exit 1;\
+	else \
+		printf "\n$(UDRL)\u0024PREFIX$(STOP) var is set to $(BOLD)$(PREFIX)$(STOP)";\
+	fi
+	@if test -z '$(BINPREFIX)'; then \
+		printf "\n$(RED)No $(BOLD)\u0024BINPREFIX$(STOP)$(RED) variable defined in config.mk.\n";\
+		printf "Look into config.def.mk for the defaults and fix that in your config.mk.$(STOP)\n";\
+		exit 1;\
+	else \
+		printf "\n$(UDRL)\u0024BINPREFIX$(STOP) var is set to $(BOLD)$(BINPREFIX)$(STOP)";\
+	fi
+	@if test -z '$(WWWPREFIX)'; then\
+		printf "\n${RED}No web directory defined in config.mk. Check your config.def.mk for the defaults and fix that in your config.mk.${STOP}";\
+		exit 1; \
+	else \
+		printf "\nThe WWW directory is $(BOLD)$(WWWDIR)$(STOP)";\
+	fi
+	@if test -n '$(COOKIES_DIR)'; then \
+	    printf "\nThe cookies will be stored in ${BOLD}$(COOKIES_DIR)${STOP}"; \
+	else \
+	    printf "\n${RED}No cookie directory configured. Check your config.def.mk for the defaults and fix that.${STOP}" ;\
+	    exit 1; \
+	fi
+	@if test -n '$(_GPG_HOMEDIR)'; then \
+			printf "\nThe home directory for GPG will be ${BOLD}$(_GPG_HOMEDIR)${STOP}" ;\
+	else \
+	        printf "\n${RED}The GPG home directory for gpigeon wasn't set in config.mk . Fix that.${STOP}" ;\
+	        $(MAKE) clean ;\
+        	exit 1;\
+	fi
+	@if test -n '$(TEST_GPG_HOMEDIR)'; then \
+			printf "\nThe home directory for GPG tests will be ${BOLD}$(TEST_GPG_HOMEDIR)${STOP}" ;\
+	else \
+	        printf "\n${RED}The GPG tests home directory for gpigeon wasn't set in config.mk . Fix that.${STOP}" ;\
+	        $(MAKE) clean ;\
+        	exit 1;\
+	fi
+	@if test -z '$(DB_PATH)'; then\
+		printf "\n${RED}No database path defined in config.mk. Check your config.def.mk for the defaults and fix that in your config.mk$(STOP)";\
+		exit 1; \
+	else \
+		printf "\nThe path to the SQLite database is $(BOLD)$(DB_PATH)$(STOP)";\
+	fi
 	
 	@if test -n '$(LINK_TEMPLATE_PATH)'; then \
 		printf "\nLink template is at ${BOLD}$(LINK_TEMPLATE_PATH)${STOP}\n"; \
@@ -20,75 +66,8 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi
 	    printf "\n${RED}The temporary directory for uploaded files wasn't set in your config.mk. Fix that.${STOP}" ;\
 	    exit 1;\
 	fi
-	
-	@if test -n '$(MSG_FORM_CHAR_LIMIT)'; then \
-       	printf "\nMessage form will have a message limit of ${BOLD}$(MSG_FORM_CHAR_LIMIT) characters${STOP}\n"; \
-   	else \
-	    printf "${RED}No character limits were defined in your config.mk. Fix that.${STOP}\n" ;\
-	    $(MAKE) clean ;\
-     	exit 1;\
-	fi
-	@if test -n '$(MAILSENDER)'; then \
-		printf "Encrypted mails will be sent from ${BOLD}$(MAILSENDER)${STOP}\n"; \
-	else \
-		printf "${RED}No mail sender adress configured in your config.mk. Fix this.${STOP}\n" ; \
-		$(MAKE) clean ; \
-		exit 1; \
-	fi
-	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' gpigeon-template.cgi > gpigeon.cgi;
-	@sed -e 's|db_path_goes_here|$(DB_PATH)|g' -i gpigeon.cgi;
-	@sed -e 's|link_template_path_goes_here|$(LINK_TEMPLATE_PATH)|g' -i gpigeon.cgi; 
-	@sed -e 's|cookies_dir_goes_here|$(COOKIES_DIR)|g' -i gpigeon.cgi;
-	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' link-tmpl-template.cgi > link-tmpl.cgi;
-	@sed -e "s|msg_char_limit_goes_here|$(MSG_FORM_CHAR_LIMIT)|g" -i link-tmpl.cgi;
-	@sed -e 's|has_mailserver_goes_here|$(HAS_MAILSERVER)|g' -i link-tmpl.cgi;
-	@sed -e 's|sender_addr_goes_here|$(MAILSENDER)|g' -i link-tmpl.cgi;
-	@sed -e 's|gpg_homedir_goes_here|$(_GPG_HOMEDIR)|g' -i link-tmpl.cgi;
-	@sed -e 's|tmp_dir_goes_here|$(UPLOAD_TMPDIR)|g' -i link-tmpl.cgi; \
-	
-	@if [ '${HAS_MAILSERVER}' == '1' ]; then \
-		printf "Local mail server setup. ${BOLD}Mail::Sendmail module will be used to send the mails${STOP}.\n"; \
-	else \
-		printf "External mail server setup. ${BOLD}Net::SMTPS module will be used to send the mails${STOP}.\n"; \
-		if test -n '$(MAILSENDER_PW)'; then \
-			printf "\tPassword for ${BOLD}${MAILSENDER}${STOP} is %s.\n" '${MAILSENDER_PW}'; \
-			sed -e 's|sender_pw_goes_here|$(MAILSENDER_PW)|g' -i link-tmpl.cgi; \
-		else\
-			printf "\t${RED}Password for the sender address wasn't set in your config.mk. Fix this${STOP}.\n";\
-			$(MAKE) clean ; \
-			exit 1; \
-		fi; \
-		if test -n '$(SMTP_DOMAIN)'; then \
-			printf "\tSMTP server: ${BOLD}$(SMTP_DOMAIN)${STOP}\n"; \
-			sed -e 's|smtp_domain_goes_here|$(SMTP_DOMAIN)|g' -i link-tmpl.cgi; \
-		else\
-			printf "\t${RED}No SMTP server was configured in your config.mk. Fix this.${STOP}\n";\
-			$(MAKE) clean ; \
-			exit 1; \
-		fi; \
-		if test -n '$(SMTP_PORT)'; then \
-			printf "\tSMTP port: ${BOLD}$(SMTP_PORT)${STOP}\n"; \
-			sed -e 's|smtp_port_goes_here|$(SMTP_PORT)|g' -i link-tmpl.cgi; \
-		else \
-			printf "\t${RED}No SMTP port configured in your config.mk. Fix this${STOP}.\n"; \
-			$(MAKE) clean ; \
-			exit 1; \
-		fi; \
-	fi
-	@if test -n '$(WWWDOMAIN)' && test -n '$(WWWPREFIX)'; then\
-		$(MAKE) nginxconf;\
-		printf "Done generating $(WWWDOMAIN).conf for nginx.";\
-	fi
-	
-	@printf "\nDone preparing files. You can now type\n\t$$ sudo make install\nin your terminal.\n"
-
-gpigeonctl: gpigeonctl.def.pl
-	@$(MAKE) check_cookiesdir;
-	@$(MAKE) check_dbpath;
-	@$(MAKE) check_prefixes;
-	@$(MAKE) check_gpghomedir;
 	@if test -n '$(WWWUSER)'; then \
-	    printf "The following UNIX user will be used for chowning and gpigeonctl: ${BOLD}$(WWWUSER)${STOP}\n"; \
+	    printf "\nThe following UNIX user will be used for chowning and gpigeonctl: ${BOLD}$(WWWUSER)${STOP}\n"; \
 	else \
 	    printf "\t${RED}No user configured. Check your config.mk${STOP}.\n"; \
 	    $(MAKE) clean ; \
@@ -107,10 +86,74 @@ gpigeonctl: gpigeonctl.def.pl
 	@sed -e 's|web_user_goes_here|$(WWWUSER)|g' -i gpigeonctl;
 	@sed -e 's|web_dir_goes_here|$(WWWDIR)|g' -i gpigeonctl;
 	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' -i gpigeonctl;
-	@chmod +x gpigeonctl;
+	@if test -n '$(MSG_FORM_CHAR_LIMIT)'; then \
+       	printf "\nMessage form will have a message limit of ${BOLD}$(MSG_FORM_CHAR_LIMIT) characters${STOP}\n"; \
+   	else \
+	    printf "${RED}No character limits were defined in your config.mk. Fix that.${STOP}\n" ;\
+	    $(MAKE) clean ;\
+     	exit 1;\
+	fi
+	@if test -n '$(MAILSENDER)'; then \
+		printf "Encrypted mails will be sent from ${BOLD}$(MAILSENDER)${STOP}\n"; \
+	else \
+		printf "${RED}No mail sender adress configured in your config.mk. Fix this.${STOP}\n" ; \
+		$(MAKE) clean ; \
+		exit 1; \
+	fi
+	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' gpigeon-template.cgi > gpigeon.cgi;
+	@sed -e 's|db_path_goes_here|$(DB_PATH)|g' -i gpigeon.cgi;
+	@sed -e 's|db_path_goes_here|$(DB_PATH)|g' invites-tmpl-template.cgi > invites-tmpl.cgi;
+	@sed -e 's|link_template_path_goes_here|$(LINK_TEMPLATE_PATH)|g' -i gpigeon.cgi; 
+	@sed -e 's|cookies_dir_goes_here|$(COOKIES_DIR)|g' -i gpigeon.cgi;
+	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' link-tmpl-template.cgi > link-tmpl.cgi;
+	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' -i invites-tmpl.cgi;
+	@sed -e "s|msg_char_limit_goes_here|$(MSG_FORM_CHAR_LIMIT)|g" -i link-tmpl.cgi;
+	@sed -e 's|has_mailserver_goes_here|$(HAS_MAILSERVER)|g' -i link-tmpl.cgi invites-tmpl.cgi;
+	@sed -e 's|sender_addr_goes_here|$(MAILSENDER)|g' -i link-tmpl.cgi invites-tmpl.cgi;
+	@sed -e 's|gpg_homedir_goes_here|$(_GPG_HOMEDIR)|g' -i link-tmpl.cgi invites-tmpl.cgi;
+	@sed -e 's|test_gpgdir_goes_here|$(TEST_GPG_HOMEDIR)|g' -i link-tmpl.cgi invites-tmpl.cgi;
+	@sed -e 's|tmp_dir_goes_here|$(UPLOAD_TMPDIR)|g' -i link-tmpl.cgi; \
+	
+	@if [ '${HAS_MAILSERVER}' == '1' ]; then \
+		printf "Local mail server setup. ${BOLD}Mail::Sendmail module will be used to send the mails${STOP}.\n"; \
+	else \
+		printf "External mail server setup. ${BOLD}Net::SMTPS module will be used to send the mails${STOP}.\n"; \
+		if test -n '$(MAILSENDER_PW)'; then \
+			printf "\tPassword for ${BOLD}${MAILSENDER}${STOP} is %s.\n" '${MAILSENDER_PW}'; \
+			sed -e 's|sender_pw_goes_here|$(MAILSENDER_PW)|g' -i link-tmpl.cgi invites-tmpl.cgi; \
+		else\
+			printf "\t${RED}Password for the sender address wasn't set in your config.mk. Fix this${STOP}.\n";\
+			$(MAKE) clean ; \
+			exit 1; \
+		fi; \
+		if test -n '$(SMTP_DOMAIN)'; then \
+			printf "\tSMTP server: ${BOLD}$(SMTP_DOMAIN)${STOP}\n"; \
+			sed -e 's|smtp_domain_goes_here|$(SMTP_DOMAIN)|g' -i link-tmpl.cgi invites-tmpl.cgi; \
+		else\
+			printf "\t${RED}No SMTP server was configured in your config.mk. Fix this.${STOP}\n";\
+			$(MAKE) clean ; \
+			exit 1; \
+		fi; \
+		if test -n '$(SMTP_PORT)'; then \
+			printf "\tSMTP port: ${BOLD}$(SMTP_PORT)${STOP}\n"; \
+			sed -e 's|smtp_port_goes_here|$(SMTP_PORT)|g' -i link-tmpl.cgi invites-tmpl.cgi; \
+		else \
+			printf "\t${RED}No SMTP port configured in your config.mk. Fix this${STOP}.\n"; \
+			$(MAKE) clean ; \
+			exit 1; \
+		fi; \
+	fi
+	@if test -n '$(WWWDOMAIN)' && test -n '$(WWWPREFIX)'; then\
+		$(MAKE) nginxconf;\
+		printf "Done generating $(WWWDOMAIN).conf for nginx.";\
+	fi
+	
+	@printf "\nDone preparing files. You can now type\n\t$$ sudo make install\nin your terminal.\n\n"
+
+gpigeonctl: gpigeonctl.def.pl
 
 install:
-	$(MAKE) gpigeon gpigeonctl;
+	$(MAKE) gpigeon;
 	@if test -n "$(WWWDOMAIN)"; then\
 	    $(MAKE) nginxconf;\
 		printf "\nInstalling $(WWWDOMAIN).conf into $(NGINXCONFDIR)\n";\
@@ -137,52 +180,5 @@ uninstall:
 	
 clean:
 	rm -f genpass.txt gpg.txt link-tmpl.cgi gpigeon.cgi $(WWWDOMAIN).conf the.db gpigeonctl
-
-check_cookiesdir:
-	@if test -n '$(COOKIES_DIR)'; then \
-	    printf "\nThe cookies will be stored in ${BOLD}$(COOKIES_DIR)${STOP}"; \
-	else \
-	    printf "\n${RED}No cookie directory configured. Check your config.def.mk for the defaults and fix that.${STOP}" ;\
-	    exit 1; \
-	fi
-
-check_dbpath:
-	@if test -z '$(DB_PATH)'; then\
-		printf "\n${RED}No database path defined in config.mk. Check your config.def.mk for the defaults and fix that in your config.mk$(STOP)";\
-		exit 1; \
-	else \
-		printf "\nThe path to the SQLite database is $(BOLD)$(DB_PATH)$(STOP)";\
-	fi
-
-check_prefixes:
-	@if test -z '$(PREFIX)'; then \
-		printf "\n$(RED)No \u0024PREFIX variable defined in config.mk.\n";\
-		printf "Look into config.def.mk for the defaults and fix that in your config.mk.$(STOP)\n";\
-		exit 1;\
-	else \
-		printf "\n\u0024PREFIX var is set to $(BOLD)$(PREFIX)$(STOP)";\
-	fi
-	@if test -z '$(BINPREFIX)'; then \
-		printf "\n$(RED)No \u0024BINPREFIX variable defined in config.mk.\n";\
-		printf "Look into config.def.mk for the defaults and fix that in your config.mk.$(STOP)\n";\
-		exit 1;\
-	else \
-		printf "\n\u0024BINPREFIX var is set to $(BOLD)$(BINPREFIX)$(STOP)";\
-	fi
-	@if test -z '$(WWWPREFIX)'; then\
-		printf "\n${RED}No web directory defined in config.mk. Check your config.def.mk for the defaults and fix that in your config.mk.${STOP}";\
-		exit 1; \
-	else \
-		printf "\nThe WWW directory is $(BOLD)$(WWWDIR)$(STOP)";\
-	fi
-
-check_gpghomedir:
-	@if test -n '$(_GPG_HOMEDIR)'; then \
-		printf "\nThe home directory for GPG will be ${BOLD}$(_GPG_HOMEDIR)${STOP}" ;\
-	else \
-	        printf "\n${RED}The GPG home directory for gpigeon wasn't set in config.mk . Fix that.${STOP}" ;\
-	        $(MAKE) clean ;\
-        	exit 1;\
-	fi
 
 .PHONY: clean install uninstall

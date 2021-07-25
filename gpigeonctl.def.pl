@@ -32,6 +32,11 @@ my $web_dir = q{web_dir_goes_here};
 my ($escaddr, $ynchoice) = undef;
 my $opt = $ARGV[0];
 my $version = 0.1;
+my $dbh = DBI->connect("DBI:SQLite:dbname=$dbh_path", undef, undef,
+{ RaiseError => 1,
+AutoCommit => 1,
+})
+or die $DBI::errstr;
 
 
 sub DbGetLine {
@@ -46,6 +51,20 @@ sub DbGetLine {
     while (my @rows = $prep->fetchrow_array()) {
         my $row = $rows[0];
         return $row;
+    }
+}
+
+sub ListUsers {
+    my ($dbh, $query) = @_;
+    my $prep = $dbh->prepare( $query );
+    my $exec = $prep->execute() or die $DBI::errstr;
+
+    if ($exec < 0){
+        print $DBI::errstr;
+    }
+
+    while (my @rows = $prep->fetchrow_array()) {
+       print "$row[0]\t$rows[1]"; 
     }
 }
 
@@ -64,14 +83,14 @@ sub DeleteCookies {
 }
 
 sub EscapeArobase {
-        my $esc = shift;
-        if ($esc =~ /^([-\@\w.]+)$/) {
-            $esc = $1;                     # $data now untainted
-	    $esc =~ s/@/\\@/;
-	    return $esc;
-        } else {
-            die "\n";      # log this somewhere
-        }
+    my $esc = shift;
+    if ($esc =~ /^([-\@\w.]+)$/) {
+        $esc = $1;                     # $data now untainted
+	$esc =~ s/@/\\@/;
+	return $esc;
+    } else {
+        die "\n";      # log this somewhere
+    }
 }
 
 sub PrintHelp{
@@ -81,57 +100,57 @@ sub PrintHelp{
 }
 
 sub SetMail {
-        print "Mail address: ";
-        my $addr = <STDIN>;
-        if (not Email::Valid->address($addr)){
-            die "\nNot a valid email address.";
-        }
+    print "Mail address: ";
+    my $addr = <STDIN>;
+    if (not Email::Valid->address($addr)){
+        die "\nNot a valid email address.";
+    }
 	chomp $addr;
 	return $addr;
 }
 
 sub SetNick {
 	my $addr = shift;
-        print "\nNickname (optional): ";
-        my $nick = <STDIN>;
-        chomp $nick;
-        if (length($nick) eq 0){
-            $nick = $addr;
-	    return $nick;
-        }
-        elsif (defined $nick and not $nick =~ /^([\w]+)$/){
-            die "\nYour nickname must have only alphanumeric characters.\n";
-        }
+    print "\nNickname (optional): ";
+    my $nick = <STDIN>;
+    chomp $nick;
+    if (length($nick) eq 0){
+        $nick = $addr;
+        return $nick;
+    }
+    elsif (defined $nick and not $nick =~ /^([\w]+)$/){
+        die "\nYour nickname must have only alphanumeric characters.\n";
+    }
 	return $nick;
 }
 
 sub SetPasswd {
-        ReadMode 2;
-        print "\nPassword: ";
-        my $pass = <STDIN>;
-        if (not length($pass) > 10){
-            ReadMode 1;
-            die "\nFor your safety, you should have a password at least 10 characters long.\n";
-        }
+    ReadMode 2;
+    print "\nPassword: ";
+    my $pass = <STDIN>;
+    if (not length($pass) > 10){
         ReadMode 1;
-        chomp $pass;
-        my $salt = `openssl rand 16`;
-        my $hash = argon2id_pass($pass, $salt, 3, '32M', 1, 32);
+        die "\nFor your safety, you should have a password at least 10 characters long.\n";
+    }
+    ReadMode 1;
+    chomp $pass;
+    my $salt = `openssl rand 16`;
+    my $hash = argon2id_pass($pass, $salt, 3, '32M', 1, 32);
 }
 
 sub TransferGPGPubKey {
 	my ($addr, $GNUPGHOME) = @_;
 	my $escaddr = EscapeArobase($addr);
-        my $gpgid = '0x'.`gpg --with-colons -k $escaddr | grep "pub:u" | cut -d':' -f5`;
-        chomp $gpgid;
-        if (not $gpgid =~ /^([\w]+)$/ and not length($gpgid) eq 18){
-            die "\nYour GPG 0xlong key id is not a correct one. It seems that no public key was tied to the provided e-mail address.\n";
-        }
-        else{
-            $gpgid = $1;
-            print "\nGPG ID: $gpgid\n";
-            return $gpgid;
-        }
+    my $gpgid = '0x'.`gpg --with-colons -k $escaddr | grep "pub:u" | cut -d':' -f5`;
+    chomp $gpgid;
+    if (not $gpgid =~ /^([\w]+)$/ and not length($gpgid) eq 18){
+        die "\nYour GPG 0xlong key id is not a correct one. It seems that no public key was tied to the provided e-mail address.\n";
+    }
+    else{
+        $gpgid = $1;
+        print "\nGPG ID: $gpgid\n";
+        return $gpgid;
+    }
 }
 
 # i should use a module for this lol
@@ -228,11 +247,6 @@ if (defined $opt){
 		use File::Path qw/rmtree/;
 		my $addr = SetMail();
 		my $esc = EscapeArobase($addr);
-		my $dbh = DBI->connect("DBI:SQLite:dbname=$dbh_path", undef, undef,
-		{ RaiseError => 1,
-		AutoCommit => 1,
-		})
-		or die $DBI::errstr;
         my $uid = DbGetLine($dbh, "SELECT userid FROM pigeons WHERE mail='$esc'") or die "$!";
 		$dbh->do(qq{DELETE FROM pigeons where mail='$addr'}) or die $DBI::errstr;
 		$dbh->disconnect;
@@ -241,7 +255,7 @@ if (defined $opt){
                     { verbose => 1,
                       safe => 1
             });
-            # GPG module doesn't support the delete_key yet so we yolo
+            #GPG module doesn't delete key
             `GNUPGHOME="$GNUPGHOME" gpg --yes --batch --delete-key $esc`;
         }
 		print "\nUser $addr deleted succesfully\n";	
@@ -268,12 +282,61 @@ if (defined $opt){
             print "All generated links have been deleted.\n";
         }
         exit 0;
-        
     }
     
+    if ($opt eq 'invite'){
+        my $verb = shift;
+        if ($verb eq 'gen'){
+            my $preconf_mail = undef;
+            my $mailfield = q{<input type="text" name="mailaddr" required>};
+            my $for_x = undef;
+            print "Set an email address beforehand ? [y/n] ";
+            $ynchoice = <STDIN>;
+            chomp $ynchoice;
+            if ($ynchoice eq 'o' or $ynchoice eq 'y'){
+                $preconf_mail = SetMail();
+                $mailfield = qq{<input value="$preconf_mail" type="text" name="mailaddr" required disabled>};
+                $for_x = "for $preconf_mail";
+            }
+            use File::Path qw/mkpath/;
+            mkpath($invites_dir) unless -d $invites_dir;
+            my $randengine = String::Random->new;
+            my $randfn = $randengine->randregex('\w{64}') . '.cgi';
+            my $invite_path = "$invites_dir/$randfn";
+            open my $in, '<', $invites_tmpl or die "Can't open template for invites : $!";
+            open my $out, '>', $invite_path or die "Can't write to invite path: $!";
+            while (<$in>) {
+                s/{mailfield_goes_here}/{$mailfield}/g;
+                print $out $_;
+            }
+            close $in or die "$!";
+            chmod(0755, $invite_path) or die "$!";
+            close $out or die "$!";
+            print "\nSuccess ! The link was generated to $invite_path $for_x.";
+        }
+
+    }
+
     if ($opt eq 'version'){
         print "$version\n";
         exit 0;
+    }
+
+    if ($opt eq 'list'){
+        my $verb = shift;
+        if (defined $verb){
+            if ($verb eq 'users'){
+                my $dbh = DBI->connect("DBI:SQLite:dbname=$dbh_path", undef, undef,
+                {
+                    RaiseError => 1,
+                    AutoCommit => 1,
+                }) or die $DBI::errstr;
+                ListUsers($dbh);
+            }
+        }
+        else{
+            print "Valid 'list' actions are:\n\tusers\n" ;
+        }
     }
 
     PrintHelp();

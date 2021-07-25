@@ -150,7 +150,7 @@ qq{<!DOCTYPE html>
                 $form_error_notif
                 <label for="filechoice" id="msgbelow">
                     (Optional) file upload: 
-                    <input id="filechoice" type="file" name="file">
+                    <input id="filechoice" type="file" name="fupload">
                 </label>
                <input id="sendbtn" type="submit" value="Send">
             </form>

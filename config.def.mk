@@ -14,6 +14,7 @@ GPIGEON_DIR=$(PREFIX)/gpigeon
 COOKIES_DIR = $(GPIGEON_DIR)/cookies
 UPLOAD_TMPDIR = $(GPIGEON_DIR)/tmp/
 LINK_TEMPLATE_PATH = $(GPIGEON_DIR)/link-tmpl.cgi
+INVITE_TEMPLATE_PATH = $(GPIGEON_DIR)/invites-tmpl.cgi
 DB_PATH=$(GPIGEON_DIR)/the.db
 _GPG_HOMEDIR = $(GPIGEON_DIR)/gnupg
 GPIGEON_PATH = $(WWWDIR)/cgi-bin/gpigeon.cgi

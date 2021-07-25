@@ -32,6 +32,40 @@ delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 $ENV{'PATH'} = q{bin_path_goes_here};
 my $rIP = $ENV{REMOTE_ADDR};
 my $uagent  = $ENV{HTTP_USER_AGENT};
+my %text_strings = (
+    addr => 'Address', 
+    addr_ok => 'is valid!', 
+    addr_nok => 'is not valid !',
+    addr_unknown => 'Unknown',
+    create_link_btn => 'Generate link',
+    cookie_problems =>'You got a cookie problem.<br> <b>Clean them and log in again</b>',
+    delete_link_btn_text => 'Delete',
+    delete_links_btn_text => 'Delete all links',
+    disconnect_btn_text => 'Disconnect',
+    here => 'here',
+    landingpage_title => 'GPIGEON - Log in',
+    logout_btn_text => 'Logout',
+    loginbtn => 'Log in',
+    link_asker_field_label => "Asker's mail :",
+    link_del_ok => 'Successful removal !',
+    link_legend_textarea =>'Type your message below :',
+    link_ok_for => 'Generated a link for',
+    link_del_failed => 'Deletion failed and here is why : ',
+    link_generated_ok => "Here's the link",
+    mailto_body => 'Your link is ',
+    mailto_subject => 'Link to your one time GPG messaging form',
+    incorrect_ids => 'Username/password combination<br> is incorrect.<br>Try again.',
+    password_label => 'Password',
+    refresh_btn => 'Refresh',
+    theader_link => 'Link', 
+    theader_for => 'For', 
+    theader_deletion => 'Deletion',
+    theader_cdate => 'Created on',
+    username_label => 'Username',
+    web_title => 'GPIGEON.CGI - Main', 
+    web_greet_msg => 'Hi and welcome. What will you do today ?', 
+);
+
 
 sub DbGetLine {
     my ($dbh, $query) = @_;
@@ -46,6 +80,54 @@ sub DbGetLine {
         my $row = $rows[0];
         return $row;
     }
+}
+
+sub GetFileTable {
+    my ($dir ,$hidden_loginfield) = @_;
+    my @table = ();
+    opendir my $dir_hnd, "$dir" or die "[GetFileTable function] Can't open $dir: $!";
+    while (readdir $dir_hnd) {
+        if ($_ ne '.' and $_ ne '..'){
+            my $linkfile_fn = $_;
+            my $linkstats= stat("$dir/$linkfile_fn"); 
+            my $mtime = scalar localtime $linkstats->mtime;
+            my $link_asker = undef;
+            if (open my $f_hnd , '<', "$dir/$linkfile_fn"){
+                for (1..2){
+                    $link_asker = readline $f_hnd;
+                    $link_asker =~ s/q\{(.*?)\}//i;
+                    $link_asker = $1;
+                }
+                close $linkfile_handle;
+                my $for_field_body = qq{<a href="mailto:$link_asker?subject=$text_strings{mailto_subject}&body=$text_strings{mailto_body} http://$ENV{SERVER_NAME}/cgi-bin/$dir/$linkfile_fn">$link_asker</a>};
+
+                if (not defined $link_asker){
+                    $for_field_body = $text_strings{addr_unknown};
+                }
+                #create links table html
+                push @table,
+                qq{<tr>
+                <td><a title="This link has been created on $mtime" href="/cgi-bin/$dir/$linkfile_fn" target="_blank" rel="noopener noreferrer nofollow">ici</a></td>
+                <td>$for_field_body</td>
+                <td>
+                <form method="POST">
+                $hidden_loginfield
+                <input type="hidden" name="adminpan" value="1">
+                <input type="hidden" name="supprlien" value="$dir/$linkfile_fn">
+                <input id="deletelinkbtn" type="submit" value="$text_strings{delete_link_btn_text}">
+                </form>
+                </td>
+                </tr>};
+
+            }
+            else {
+                close $linkfile_handle;
+                die "[GetFileTable function] Error: Can't open $linkfile_fn: $!";
+            }
+        }
+    }
+    closedir $dir_hnd;
+    return @table;
 }
 
 sub LoginOk {
@@ -78,7 +160,7 @@ sub CookieLogin {
 
     my $login_cookiefile = "$cookiesdir/$userid/$filename.txt";
     if (-e $login_cookiefile){
-        open my $in, '<', $login_cookiefile or die "can't read file: $!";
+        open my $in, '<', $login_cookiefile or die "[CookieLogin function] can't read file: $!";
         $rip_line = readline $in;
         $ua_line = readline $in;
         $id_line = readline $in;
@@ -133,32 +215,6 @@ sub PasswdLogin {
 				return;
 			}
 			return $userid; # as an userid is always > 0, we can use it as return value
-		} else {
-			return;
-		}
-	} else {
-		$dbh->disconnect;
-		return;
-	}
-	$dbh->disconnect;
-	return;
-}
-
-sub LoginCookieGen {
-    my ($userid, $magic_cookie, $cookiesdir) = @_;
-    if (not defined $magic_cookie){
-        my $str_rand_obj = String::Random->new;
-        my $val = $str_rand_obj->randregex('\w{64}');
-        if (not -d "$cookiesdir/$userid"){
-            mkpath("$cookiesdir/$userid");
-        }
-        my $cookiefile = "$cookiesdir/$userid/$val.txt";
-        my $new_magic_cookie = CGI::Cookie->new(
-            -name  => 'id',
-            -value => $val, 
-            -expires => '+1y',
-            '-max-age' => '+1y',
-            -domain => ".$ENV{'SERVER_NAME'}",
             -path      => '/',
             -secure   => 1,
             -httponly => 1,
@@ -200,40 +256,7 @@ my $hostname = $ENV{'SERVER_NAME'};
 my $db_path             = q{db_path_goes_here};
 my $cookiesdir          = q{cookies_dir_goes_here};
 my $link_template_path  = q{link_template_path_goes_here};
-
-my %text_strings = (
-    addr => 'Address', 
-    addr_ok => 'is valid!', 
-    addr_nok => 'is not valid !',
-    addr_unknown => 'Unknown',
-    create_link_btn => 'Generate link',
-    cookie_problems =>'You got a cookie problem.<br> <b>Clean them and log in again</b>',
-    delete_link_btn_text => 'Delete',
-    delete_links_btn_text => 'Delete all links',
-    disconnect_btn_text => 'Disconnect',
-    here => 'here',
-    landingpage_title => 'GPIGEON - Log in',
-    logout_btn_text => 'Logout',
-    loginbtn => 'Log in',
-    link_asker_field_label => "Asker's mail :",
-    link_del_ok => 'Successful removal !',
-    link_legend_textarea =>'Type your message below :',
-    link_ok_for => 'Generated a link for',
-    link_del_failed => 'Deletion failed and here is why : ',
-    link_generated_ok => "Here's the link",
-    mailto_body => 'Your link is ',
-    mailto_subject => 'Link to your one time GPG messaging form',
-    incorrect_ids => 'Username/password combination<br> is incorrect.<br>Try again.',
-    password_label => 'Password',
-    refresh_btn => 'Refresh',
-    theader_link => 'Link', 
-    theader_for => 'For', 
-    theader_deletion => 'Deletion',
-    theader_cdate => 'Created on',
-    username_label => 'Username',
-    web_title => 'GPIGEON.CGI - Main', 
-    web_greet_msg => 'Hi and welcome. What will you do today ?', 
-);
+my $invites_template_path  = q{invite_template_goes_here};
 
 my $cgi_query_get = CGI->new;
 my $username = $cgi_query_get->param('username');
@@ -298,8 +321,7 @@ if ($disconnect and defined $magic_cookie){ # if we disconnect and cookie is act
 	   );
 	   my $f = "$cookiesdir/$userid/$idval.txt";
 	   if (-e "$f"){
-            unlink "$f" or die "cant delete cookie at $f :$!\n"; # delet it
-
+            unlink "$f" or die "cant delete cookie at $f :$!\n";
        }       
        print "Set-Cookie: $delete_uid_cookie\n";
        print "Set-Cookie: $delete_id_cookie\n";
@@ -315,6 +337,7 @@ if($loginok){
     LoginCookieGen($userid, $magic_cookie, $cookiesdir);
     my $user_mailaddr = DbGetLine($dbh, qq{SELECT mail from pigeons where userid='$userid';});
     my $nick = DbGetLine($dbh, qq{SELECT name from pigeons where userid='$userid';});
+    my $gpgid = DbGetLine($dbh, qq{SELECT gpgfp from pigeons where userid='$userid';});
     if (not -d "./l/$userid"){
         mkpath("./l/$userid");
     }
@@ -351,6 +374,7 @@ if($loginok){
             while( <$in> ) {
                 s/{link_user}/{$link_asker}/g;
                 s/{user_mailaddr_goes_here}/{$user_mailaddr}/g;
+                s/{gpgid_goes_here}/{$gpgid}/g;
                 print $out $_;
             }
             close $in or die;
@@ -365,8 +389,8 @@ if($loginok){
     }
    
 
-    opendir my $link_dir_handle, "./l/$userid" or die "Can't open ./l: $!";
-    while (readdir $link_dir_handle) {
+    opendir my $dir_hnd, "./l/$userid" or die "Can't open ./l: $!";
+    while (readdir $dir_hnd) {
         if ($_ ne '.' and $_ ne '..'){
             my $linkfile_fn = $_;
             my $linkstats = stat("./l/$userid/$linkfile_fn");
@@ -397,7 +421,6 @@ if($loginok){
                         </form>
                     </td>
                 </tr>};
-
             }
             else {
                 close $linkfile_handle;
@@ -405,7 +428,7 @@ if($loginok){
             }
         }
     }
-    closedir $link_dir_handle;
+    closedir $dir_hnd;
     print 'Content-type: text/html',"\n\n",
     qq{<!DOCTYPE html>
         <html> 
@@ -464,42 +487,42 @@ else{
     }
     
     print "Content-type: text/html\n\n",
-qq{<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<link rel="icon" type="image/x-icon" href="/favicon.ico">
-<link rel="stylesheet" type="text/css" href="/styles.css">
-<title>$text_strings{landingpage_title}</title>
-</head>
-<body>
-<h1>$text_strings{landingpage_title}</h1>
-<form action="/cgi-bin/gpigeon.cgi" method="POST">
-<table id="loginbox">
-<tbody>
- <tr>
-   <td>$text_strings{username_label} :</td>
-   <td><input type="text" name="username"></td>
- </tr>
- <tr>
-   <td>$text_strings{password_label} :</td>
-   <td><input type="password" name="password"></td>
- </tr>
-      <tr>
-            <td></td>
-            <td id="loginerr">$login_notif</td>
-      </tr>
- <tr id="authbtn">
-   <td></td>
-   <td><input type="submit" value="$text_strings{loginbtn}"></td>
- </tr>
-</tbody>
-</table>
-</form>
+    qq{<!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
+        <link rel="stylesheet" type="text/css" href="/styles.css">
+        <title>$text_strings{landingpage_title}</title>
+    </head>
+    <body>
+        <h1>$text_strings{landingpage_title}</h1>
+        <form action="/cgi-bin/gpigeon.cgi" method="POST">
+        <table id="loginbox">
+        <tbody>
+         <tr>
+           <td>$text_strings{username_label} :</td>
+           <td><input type="text" name="username"></td>
+         </tr>
+         <tr>
+           <td>$text_strings{password_label} :</td>
+           <td><input type="password" name="password"></td>
+         </tr>
+              <tr>
+                    <td></td>
+                    <td id="loginerr">$login_notif</td>
+              </tr>
+         <tr id="authbtn">
+           <td></td>
+           <td><input type="submit" value="$text_strings{loginbtn}"></td>
+         </tr>
+        </tbody>
+        </table>
+        </form>
 
-<p><a href="http://git.les-miquelots.net/gpigeon"
-    title="gpigeon download link">Source code here.</a> It is similar to <a target="_blank" rel="nofollow noopener noreferrer" href="https://hawkpost.co">hawkpost.co</a>.
+        <p><a href="http://git.les-miquelots.net/gpigeon"
+            title="gpigeon download link">Source code here.</a> It is similar to <a target="_blank" rel="nofollow noopener noreferrer" href="https://hawkpost.co">hawkpost.co</a>.
 
-</body>
-</html>};
+    </body>
+    </html>};
 }

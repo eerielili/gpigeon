@@ -1,180 +1,274 @@
 html{
-    background-color:#87CEEB
+	background-color: #87CEEB
 }
 
 body{
-      font-family:sans-serif;
-      width:80%;
-      margin:auto;
-      font-size:12pt;
+	font-family: sans-serif;
+	width: 80%;
+	margin: auto;
+	font-size: 12pt
 }
 
 h1, #msgbelow{
-    display:block;
-    text-align:center;
+	display: block;
+	text-align: center
 }
 
 
 #linkstable tr th{
-    padding:10px;
-    font-size:110%;
-    margin:0;
-    border: 3px solid black;
-    border-bottom:none;
+	margin: 0;
+	padding: 10px;
+	font-size: 110%;
+	border: 3px solid black;
+	border-bottom: none
+}
+
+#adminprom, #mailnotif{
+    display: block;
+    padding: 3px
+}
+
+#mailnotif-check, #adminprom-check{
+	float: left
 }
 
 #linkstable td{
-    text-align:center;
-    padding: 5px ;
+	padding: 10px;
+	text-align: center
 }
 
 #linkstable input{
-    padding:10px;
-    margin:5px;
-    margin-top:10px;
+	padding: 10px;
+	margin: 5px;
+	margin-top: 10px
 }
 
 #linkstable table{
-    margin-top:10px;
-    border: 1px solid black;
+	margin-top: 10px;
+	border: 1px solid black
 }
 
 #linkstable td{
-    border:1px solid black;
+	border: 1px solid black
 }
 
-#logoutbtn {
-    display: inline;
-    float:right;
-    top: 0;
-    right: 0;
-    position:absolute;
+#logoutbtn, #adminpanbtn {
+	display: inline;
+	float: right;
+	top: 0;
+	right: 0;
+	position: absolute
+}
+
+#adminpanbtn {
+	right: 110px
 }
 
 #msg{
-    display:block;
-    margin-left:auto;
-    margin-right:auto;
+    display: block;
+	margin-left: auto;
+	margin-right: auto;
 	border: 1px solid black;
 	overflow: -moz-scrollbars-none;
-	resize:vertical;
-	width:50%;
-	-ms-overflow-style:none;
+	resize: vertical;
+	width: 50%;
+    -ms-overflow-style: none
 }
 
 
 #msg::-webkit-scrollbar {
-    width: 0 !important
+	width: 0 !important
 }
 
 #success {
-	color:green;
+	color: green
 }
 
 #failure {
-	color:red;
+	color: red
 }
 
-#loginbox #loginerr{
-    border:none;
-    margin-right:auto;
-    margin-left:auto
+#loginbox, #inviteform{
+	border: none;
+	margin-right: auto;
+	margin-left: auto
 }
 
-#loginbox input {
-	width:100%;
+#loginbox input, #inviteform input{
+	width: 100%;
 	padding: 5px;
-	line-height:25px;
-
+	line-height: 25px
 }
 
-#loginbox td {
-	text-align:right;
-	border:none;
+#labels{
+	text-align: right;
+	border: none
 }
 
-#loginbox tr {
-	border:none;
+#loginbox tr, #inviteform tr{
+	border: none
 }
 
-#authbtn td {
-	text-align:center;
+#inviteform textarea {
+	height: 400px
 }
 
-#authbtn input {
-	width:100px;
+#gpgpklabel {
+	text-align: right;
+	display: block /*so the label is display at the top*/
 }
 
-#mailfied {
-    padding: 10px
+td #gpgpubk{
+	display: block;
+	width: 400px;
+	height: 250px;
+	resize: none
 }
 
-#refreshbtn, #deletelinkbtn, #deleteallbtn,
-#logoutbtn, #genlinkbtn, #sendbtn  {
-	border-radius:0
-	border:3px outset silver;
-	padding:15px;
-	margin:5px;
+#authbtn td, #createaccbtn td, #loginerr{
+	text-align:center
+}
+
+#authbtn input, #createaccbtn input{
+	width: 100px
 }
 
 #mailfield {
-	padding: 10px;
+	padding: 10px
 }
+ 
+#genlinkbtn-mob,#geninvbtn-mob {
+    display: none
+}
+
+#refreshbtn, #deletelinkbtn, #deleteallbtn,
+#logoutbtn, #loginbtn, #genlinkbtn, #sendbtn,
+#accbtn, #adminpanbtn, #geninvbtn, #geninvbtn-mob{
+	cursor: pointer;
+	border-radius: 0;
+	border: 3px outset silver;
+	padding: 15px;
+	margin: 5px
+}
+
+#refreshbtn:active, #deletelinkbtn:active, 
+#deleteallbtn:active, #genlinkbtn:active, #genlinkbtn-mob:active,
+#sendbtn:active, #accbtn:active,
+#logoutbtn:active, #loginbtn:active,
+#adminpanbtn:active{
+	border: 3px inset silver
+}
+
+#mailfield {
+	padding: 10px
+}
+
+#loginerr {
+	text-align: center
+}
+
+#accbtn {
+	height: 50px
+}
+
+#sendbtn , #accbtn{
+	display: block;
+	width: 20%;
+	margin-left: auto;
+	margin-right: auto
+}
+
+#linkstable a:hover{
+	opacity: 0.3;
+	background: white
+}
+
 
 @media screen and (max-width: 740px) {
 	body {
-        font-size:0.8em;
-    }
-
-    h1{
-        font-size:1.5em;
-    }
-
-	#linkstable th,td{
-        padding:3px;
-    }
-
-	#linkstable input{
-	    padding:4px;
-	    margin:2px;
-	    margin-top:10px;
+		margin: 0;
+		font-size: 0.8em
 	}
-	
-	#loginbox input{
+
+	h1{
+		text-align: left;
+		font-size: 1.5em
+	}
+
+	#inviteform, #loginbox{
+		margin: 0
+	}
+
+	#inviteform td , #loginbox td{
+		display: block;
+		text-align: left
+	}
+
+	#inviteform textarea{
+		margin: 0;
+		font-size: 9px;
+		width: 150px;
+		height: 200px
+	}
+
+	#linkstable td{
+		margin: 0;
+		padding: 0px;
+		font-size: 10px
+	}
+
+	#linkstable tr,
+	#linkstable th, #linkstable input{
+		margin: 0;
+		padding: 0px
+	}
+
+	#loginbox input,  #inviteform input{
 		padding: 2px;
-		line-height:15px;
+		line-height: 15px
 	}
 
-    #logoutbtn {
-        float:none;
-        top:unset;
-        right:unset;
-        position:revert;
-    }
+	#logoutbtn, #adminpanbtn {
+		float: none;
+		top: unset;
+		right: unset;
+		position: revert
+	}
 
-    #mailfield{
-        padding: 3px;
-    }
-   
-    #msg {
-        width:50%;
-        margin:0;
-    }
+	#mailfield{
+		padding: 3px
+	}
 
-    #msgbelow {
-        text-align:left;
-    }
+	#msg {
+		width: 50%;
+		margin: 0
+	}
 
-    #refreshbtn, #deletelinkbtn, #deleteallbtn,
-    #logoutbtn, #genlinkbtn, #sendbtn  {
-        padding: 8px
-    }
-   
-    #genlinkbtn{
-        display:block
-    }
+	#msgbelow {
+		text-align: left
+	}
 
-    #sendbtn {
-        display:inline
-    }
+	#refreshbtn, #deletelinkbtn, #deleteallbtn,
+	#logoutbtn, #genlinkbtn, #geninvbtn-mob, #sendbtn, #adminpanbtn{
+		padding: 8px
+	}
+
+	#genlinkbtn, #geninvbtn-mob{
+		display: block
+	}
+
+	#geninvbtn{
+		display: none
+	}
+
+	#sendbtn {
+		margin: 0;
+		display: inline;
+		width: 100px
+	}
+
+	#mailnotif, #mailnotif input, #adminprom, #adminprom input{
+		display: block;
+		padding: 10px
+	}
 }
