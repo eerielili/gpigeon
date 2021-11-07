@@ -1,0 +1,9 @@
+*.asc
+config.mk
+gpigeon.cgi
+gpigeonctl
+link-tmpl.cgi
+invites-tmpl.cgi
+invites.html
+index.html
+test/*

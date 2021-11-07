@@ -60,8 +60,14 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi invites-tmpl-template.cgi
 		printf "\n${RED}The path for the link template wasn't set in your config.mk. Fix that.${STOP}" ;\
 		exit 1;\
 	fi
+	@if test -n '$(INVITE_TEMPLATE_PATH)'; then \
+		printf "Invite template is at ${BOLD}$(INVITE_TEMPLATE_PATH)${STOP}\n"; \
+	else \
+		printf "\n${RED}The path for the invite template wasn't set in your config.mk. Fix that.${STOP}" ;\
+		exit 1;\
+	fi
 	@if test -n '$(UPLOAD_TMPDIR)'; then \
-	    printf "\nUploaded files will be temporary stored at ${BOLD}$(UPLOAD_TMPDIR)${STOP}"; \
+	    printf "Uploaded files will be temporary stored at ${BOLD}$(UPLOAD_TMPDIR)${STOP}\n"; \
 	else \
 	    printf "\n${RED}The temporary directory for uploaded files wasn't set in your config.mk. Fix that.${STOP}" ;\
 	    exit 1;\
@@ -104,6 +110,7 @@ gpigeon: gpigeon-template.cgi link-tmpl-template.cgi invites-tmpl-template.cgi
 	@sed -e 's|db_path_goes_here|$(DB_PATH)|g' -i gpigeon.cgi;
 	@sed -e 's|db_path_goes_here|$(DB_PATH)|g' invites-tmpl-template.cgi > invites-tmpl.cgi;
 	@sed -e 's|link_template_path_goes_here|$(LINK_TEMPLATE_PATH)|g' -i gpigeon.cgi; 
+	@sed -e 's|invite_template_goes_here|$(INVITE_TEMPLATE_PATH)|g' -i gpigeon.cgi; 
 	@sed -e 's|cookies_dir_goes_here|$(COOKIES_DIR)|g' -i gpigeon.cgi;
 	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' link-tmpl-template.cgi > link-tmpl.cgi;
 	@sed -e 's|bin_path_goes_here|$(BINPREFIX)|g' -i invites-tmpl.cgi;
