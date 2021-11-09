@@ -4,6 +4,6 @@ gpigeon.cgi
 gpigeonctl
 link-tmpl.cgi
 invites-tmpl.cgi
-invites.html
+invite.html
 index.html
 test/*

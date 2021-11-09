@@ -209,9 +209,9 @@ if (defined $opt){
             RaiseError => 1,
             AutoCommit => 1,
             }) or die $DBI::errstr;
-        $dbh->do('create table pigeons (userid integer primary key, mail text NOT NULL UNIQUE, name text UNIQUE, pass text NOT NULL, gpgfp text NOT NULL UNIQUE, isadmin integer NOT NULL)') or die $DBI::errstr;
-        $dbh->do('create index idx_pigeonsid on pigeons(userid)') or die $DBI::errstr;
-        $dbh->do(qq{INSERT INTO pigeons VALUES( ?, '$addr', '$nick', '$hash', '$gpgid', 1)}) or die $DBI::errstr;
+        $dbh->do('create table users (userid integer primary key, mail text NOT NULL UNIQUE, name text UNIQUE, pass text NOT NULL, gpgfp text NOT NULL UNIQUE, isadmin integer NOT NULL)') or die $DBI::errstr;
+        $dbh->do('create index idx_usersid on users(userid)') or die $DBI::errstr;
+        $dbh->do(qq{INSERT INTO users VALUES( ?, '$addr', '$nick', '$hash', '$gpgid', 1)}) or die $DBI::errstr;
         $dbh->disconnect;
         unlink 'key.asc';
         find(\&recursivechown, $cookiesdir);
@@ -237,7 +237,7 @@ if (defined $opt){
 		AutoCommit => 1,
 		})
 		or die $DBI::errstr;
-		$dbh->do(qq{INSERT INTO pigeons VALUES( ?, '$addr', '$nick', '$hash', '$gpgid', 1)}) or die $DBI::errstr;
+		$dbh->do(qq{INSERT INTO users VALUES( ?, '$addr', '$nick', '$hash', '$gpgid', 1)}) or die $DBI::errstr;
 		$dbh->disconnect;
 		print "\nUser $addr added succesfully\n";	
 		exit 0;
@@ -247,8 +247,8 @@ if (defined $opt){
 		use File::Path qw/rmtree/;
 		my $addr = SetMail();
 		my $esc = EscapeArobase($addr);
-        my $uid = DbGetLine($dbh, "SELECT userid FROM pigeons WHERE mail='$esc'") or die "$!";
-		$dbh->do(qq{DELETE FROM pigeons where mail='$addr'}) or die $DBI::errstr;
+        my $uid = DbGetLine($dbh, "SELECT userid FROM users WHERE mail='$esc'") or die "$!";
+		$dbh->do(qq{DELETE FROM users where mail='$addr'}) or die $DBI::errstr;
 		$dbh->disconnect;
         if (defined $uid and $uid > 0){
             rmtree("$cookiesdir/$uid", "$web_dir/l/$uid", 

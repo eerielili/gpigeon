@@ -205,11 +205,11 @@ sub PasswdLogin {
 		}
 	} 
 	my ($hash, $userid) = undef;	
-	my $selecthash = qq{SELECT pass from pigeons where mail='$username' or name='$username';};
+	my $selecthash = qq{SELECT pass from users where mail='$username' or name='$username';};
 	$hash = DbGetLine($dbh, $selecthash);
 	if (defined $hash and length($hash) > 1){
 		if(argon2id_verify($hash,$pass)){
-			my $selectuserid = qq{SELECT userid from pigeons where pass='$hash';};
+			my $selectuserid = qq{SELECT userid from users where pass='$hash';};
 			$userid = DbGetLine($dbh, $selectuserid);
 			if ($userid =~ /^([0-9]+)$/){
 				$userid = $1;
@@ -372,9 +372,9 @@ print "Cache-Control: no-store, must-revalidate\n";
 if($loginok){
 
     $userid           = $loginok; 
-    my $user_mailaddr = DbGetLine($dbh, qq{SELECT mail from pigeons where userid='$userid';});
-    my $nick          = DbGetLine($dbh, qq{SELECT name from pigeons where userid='$userid';});
-    my $isadmin       = DbGetLine($dbh, qq{SELECT isadmin from pigeons where userid='$userid';});
+    my $user_mailaddr = DbGetLine($dbh, qq{SELECT mail from users where userid='$userid';});
+    my $nick          = DbGetLine($dbh, qq{SELECT name from users where userid='$userid';});
+    my $isadmin       = DbGetLine($dbh, qq{SELECT isadmin from users where userid='$userid';});
     LoginCookieGen($userid, $magic_cookie, $cookiesdir);
 
     if ($isadmin){
