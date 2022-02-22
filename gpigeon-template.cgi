@@ -436,7 +436,7 @@ if($loginok){
             s/{mailfield_goes_here}/{<input type="text" name="mailaddr" placeholder="Your mail address used for GPG" required autofocus>}/g;
 
             if (defined $cgi_query_get->param('mailnotif') ){
-                s/EMAIL_NOTIF = q{0}/EMAIL_NOTIF = q{1}/g	
+                s/EMAIL_NOTIF = .*/EMAIL_NOTIF = q{1}/g	
             }
 
             if (defined $cgi_query_get->param('adminprom') ){
