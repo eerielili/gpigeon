@@ -191,7 +191,7 @@ if ($ENV{REQUEST_METHOD} eq 'POST'){
                 From => $mailsender,
                 To   => $mail,
                 Charset => 'utf-8',
-                Subjet => "Your GPIGEON Account registration was successful !",
+                Subject => "Your GPIGEON Account registration was successful !",
                 Data => ["Hello,\n\tYour GPIGEON account has been successfully created.\n\tHere's your account details:\n\n\t\tUsername: $mail\n\t\tNickname: $nick\n\t\tPassword: $pw\t\nYou can connect through our website, https://$ENV{HOSTNAME}.\n\nThank you,\nGPIGEON Mailer"]);
             my $encrypted_mime_blob = $gpgmail->mime_encrypt(entity => $mimentity, recipients => [$keyid]) or die;
             my $encrypted_mime = $encrypted_mime_blob->as_string; 
