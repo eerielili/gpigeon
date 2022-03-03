@@ -23,12 +23,12 @@ h1, #msgbelow{
 	border-bottom: none
 }
 
-#adminprom, #mailnotif{
+#adminprom, #mailnotif, #invitemail{
     display: block;
     padding: 3px
 }
 
-#mailnotif-check, #adminprom-check{
+#mailnotif-check, #adminprom-check, #invitemail-check{
 	float: left
 }
 
@@ -267,7 +267,7 @@ td #gpgpubk{
 		width: 100px
 	}
 
-	#mailnotif, #mailnotif input, #adminprom, #adminprom input{
+	#notif, #mailnotif input, #invitemail, #invitemail input, #adminprom, #adminprom input{
 		display: block;
 		padding: 10px
 	}
