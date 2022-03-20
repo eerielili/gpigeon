@@ -29,18 +29,18 @@ use CGI::Carp qw(fatalsToBrowser);
 
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 $ENV{'PATH'} = q{bin_path_goes_here};
-my $uagent = $ENV{HTTP_USER_AGENT};
-my $rIP = $ENV{REMOTE_ADDR};
+my $userAgent = $ENV{HTTP_USER_AGENT};
+my $remoteIP = $ENV{REMOTE_ADDR};
 my $hostname = $ENV{'SERVER_NAME'};
 
 sub ValidCookie {
-    my $client_login_cookie = shift;
-    if (not defined $client_login_cookie){
+    my $clientLoginCookie = shift;
+    if (not defined $clientLoginCookie){
         return;
     }
     my $dir = shift;
-    my $filename = $client_login_cookie->value;
-    my $login_cookiefile = "$dir/$filename.txt";
+    my $filename = $clientLoginCookie->value;
+    my $loginCookieFile = "$dir/$filename.txt";
 
     if ($filename =~ /^([\w]+)$/){
 	    $filename = $1;
@@ -49,24 +49,24 @@ sub ValidCookie {
 	    return;
     }
 
-    if (-e $login_cookiefile){ 
-        open my $in, '<', $login_cookiefile or die "can't read file: $!";
-        my $rip_line = readline $in;
-        my $ua_line = readline $in;
-        my $cookie_line = readline $in;
+    if (-e $loginCookieFile){ 
+        open my $in, '<', $loginCookieFile or die "can't read file: $!";
+        my $remoteIPLine = readline $in;
+        my $userAgentLine = readline $in;
+        my $cookieLine = readline $in;
         close $in;
-        chomp ($rip_line, $ua_line);
-        if (not defined $cookie_line){
+        chomp ($remoteIPLine, $userAgentLine);
+        if (not defined $cookieLine){
             return;
         }
-        my %magic_cookie = CGI::Cookie->parse($cookie_line) or die "$!";
-        my $magic_cookie_val = $magic_cookie{'id'}->value;
+        my %magicCookie = CGI::Cookie->parse($cookieLine) or die "$!";
+        my $magicCookieValue = $magicCookie{'id'}->value;
    
-        my $rip_match = $rip_line cmp $rIP;
-        my $ua_match = $ua_line cmp $uagent;
-        my $magic_match = $magic_cookie_val cmp $client_login_cookie->value; 
+        my $remoteIPMatch = $remoteIPLine cmp $remoteIP;
+        my $userAgentMatch = $userAgentLine cmp $userAgent;
+        my $magicCookieMatch = $magicCookieValue cmp $clientLoginCookie->value; 
 
-        if ($rip_match == 0 and $ua_match == 0 and $magic_match == 0){
+        if ($remoteIPMatch == 0 and $userAgentMatch == 0 and $magicCookieMatch == 0){
             return 1;
         }
     }
@@ -77,16 +77,16 @@ sub ValidCookie {
 }
 
 sub LoginCookieGen {
-    my $id_cookie = shift;
+    my $IDCookie = shift;
     my $dir = shift;
-    if (not defined $id_cookie){
+    if (not defined $IDCookie){
         if (not -d "$dir"){
             mkpath("$dir") or die "$!";
         }
-        my $str_rand_obj = String::Random->new;
-        my $val = $str_rand_obj->randregex('\w{64}');
-        my $cookiefile = "$dir/$val.txt";
-        my $new_login_cookie = CGI::Cookie->new(
+        my $StrRandObj = String::Random->new;
+        my $val = $StrRandObj->randregex('\w{64}');
+        my $cookieFile = "$dir/$val.txt";
+        my $newLoginCookie = CGI::Cookie->new(
             -name  => 'id',
             -value => $val, 
             -expires => '+1y',
@@ -97,10 +97,10 @@ sub LoginCookieGen {
             -httponly => 1,
             -samesite => 'Strict',
        ) or die "Can't create cookie: $!";
-       open my $out, '>', $cookiefile or die "Can't write to $cookiefile: $!";
-       print $out "$rIP\n$uagent\n$new_login_cookie";
+       open my $out, '>', $cookieFile or die "Can't write to $cookieFile: $!";
+       print $out "$remoteIP\n$userAgent\n$newLoginCookie";
        close $out;
-       print "Set-Cookie: $new_login_cookie\n";
+       print "Set-Cookie: $newLoginCookie\n";
     }
 }
 
@@ -116,170 +116,221 @@ sub UntaintCGIFilename {
     return $filename;
 }
 
-my ( $link_asker, $checkedornot, $hidden_pwfield, $id_cookie, 
-    $delete_id_cookie, $idval, $refresh_form) = undef;
-my $linkgen_notif = my $mailisok_notif = my $deletion_notif = my $login_notif = '<!-- undef notif -->';
-my @created_links = ();
+sub GetRFC822Date {
+    use POSIX qw(strftime locale_h);
+    my $oldLocale = setlocale(LC_TIME, "C");
+    my $date = strftime("%a, %d %b %Y %H:%M:%S %z", localtime(time()));
+    setlocale(LC_TIME, $oldLocale);
+    return $date;
+}
 
-my $argon2id_hash       = qq{argon2id_hash_goes_here};
-my $cookies_dir         = q{cookies_dir_goes_here};
-my $link_template_path  = q{link_template_path_goes_here};
+sub SendGpigeonMail {
+	my ($recipient, $title, $message) = @_;
+	use Net::SMTP;
+	use Net::SMTPS;
+	use MIME::Entity;
+	my $RFC822Date = GetRFC822Date() or die;
+    my $HasMailserver = q{has_mailserver_goes_here};
+    my $mailSender = q{sender_addr_goes_here};
+    my $mailSenderSMTP = q{smtp_domain_goes_here};
+    my $mailSenderPort = q{smtp_port_goes_here};
+    my $mailSenderPassword = q{sender_pw_goes_here};
+	my $smtp     = undef;
+	if ($HasMailserver){
+		$smtp = Net::SMTP->new(Host => 'localhost') or die; 
+	}
+	else {
+		$smtp = Net::SMTPS->new($mailSenderSMTP, Port => $mailSenderPort, doSSL => 'ssl', Debug_SSL => 0); 
+		$smtp->auth($mailSender, $mailSenderPassword) or die;
+	}
+	my $notifyLinkByMailData = MIME::Entity->build(
+		Date => $RFC822Date,
+		From => $mailSender,
+		To   => $recipient,
+		Charset => 'utf-8',
+		Subject => $title,
+		Data => [$message]
+    ) or die;
 
-my %text_strings = (
-    addr => 'Address', 
-    addr_ok => 'is valid!', 
-    addr_nok => 'is not valid !',
-    addr_unknown => 'Unknown',
-    create_link_btn => 'Generate link', 
-    delete_link_btn_text => 'Delete',
-    delete_links_btn_text => 'Delete all links',
-    here => 'here',
-    landingpage_title => 'GPIGEON - Login',
-    link_asker_field_label => q{Asker's mail :},
-    link_del_ok => 'Successful removal !',
-    link_ok_for => 'Generated a link for',
-    link_del_failed => 'Deletion failed and here is why : ',
-    loginbtn => 'Log in',
-    logout_btn_text => 'Logout',
-    mailto_body => 'Your link is ',
-    mailto_subject => 'Link to your one time GPG messaging form',
-    mainpage_title => 'GPIGEON - Main',
-    notif_login_failure => 'Cannot login. Check if your username and password match.',
-    refresh_btn_text => 'Refresh',
-    theader_link => 'Link', 
-    theader_for => 'For', 
-    theader_deletion => 'Deletion', 
-    theader_cdate => 'Created on', 
-    web_greet_msg => 'Hi and welcome.', 
+	$smtp->mail($mailSender) or die "Net::SMTP module has broke: $!.";
+	if ($smtp->to($recipient)){
+	    $smtp->data($notifyLinkByMailData->stringify);
+	    $smtp->dataend();
+	    $smtp->quit();
+	}
+	else {
+	    die $smtp->message();
+	}
+}
+
+my ( $linkAsker, $checkedOrNot, $hiddenPasswordField, $IDCookie, 
+    $deleteIDCookie, $IDCookieValue, $refreshForm) = undef;
+my $linkGenNotif = my $mailIsOkNotif = my $deletionNotif = my $loginNotif = my $sentMailNotif = '<!-- undef notif -->';
+my @createdLinks = ();
+
+my $argon2idHash       = qq{argon2idHash_goes_here};
+my $cookiesDir         = q{cookiesDir_goes_here};
+my $linkTemplatePath  = q{linkTemplatePath_goes_here};
+
+my %textStrings = (
+    addr                       => 'Address', 
+    addr_ok                    => 'is valid!', 
+    addr_nok                   => 'is not valid !',
+    addr_unknown               => 'Unknown',
+    create_link_btn            => 'Generate link', 
+    checkbox_notiflinkbymail   => 'Notify the user by mail about the link',
+    delete_link_btn_text       => 'Delete',
+    delete_links_btn_text      => 'Delete all links',
+    here                       => 'here',
+    landingpage_title          => 'GPIGEON - Login',
+    linkAsker_field_label      => 'Mail :',
+    link_del_ok                => 'Successful removal !',
+    link_ok_for                => 'Generated a link for',
+    link_del_failed            => 'Deletion failed and here is why : ',
+    loginbtn                   => 'Log in',
+    logout_btn_text            => 'Logout',
+    mailto_body                => 'Your link is ',
+    mailto_subject             => 'Link to your one time GPG messaging form',
+    mainpage_title             => 'GPIGEON - Main',
+    notif_login_failure        => 'Cannot login. Check if your username and password match.',
+    refresh_btn_text           => 'Refresh',
+    theader_link               => 'Link', 
+    theader_for                => 'For', 
+    theader_deletion           => 'Deletion', 
+    theader_cdate              => 'Created on', 
+    web_greet_msg              => 'Hi and welcome.', 
 );
-my $cgi_query_get = CGI->new;
-my $pw = $cgi_query_get->param('password');
-my $logout = $cgi_query_get->param('logout');
-my %cur_cookies = CGI::Cookie->fetch;
-$id_cookie = $cur_cookies{'id'};
+my $CGIQueryGet = CGI->new;
+my $password = $CGIQueryGet->param('password');
+my $logout = $CGIQueryGet->param('logout');
+my %currentCookies = CGI::Cookie->fetch;
+$IDCookie = $currentCookies{'id'};
 
-if (not defined $id_cookie){
-    $hidden_pwfield = qq{<input type="hidden" name="password" value="$pw">};
-    $refresh_form = qq{<form method="POST">
-                   $hidden_pwfield
-                   <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn_text}">
+if (not defined $IDCookie){
+    $hiddenPasswordField = qq{<input type="hidden" name="password" value="$password">};
+    $refreshForm = qq{<form method="POST">
+                   $hiddenPasswordField
+                   <input id="refreshbtn" type="submit" value="$textStrings{refresh_btn_text}">
                 </form>};
 }
 else{
-    $hidden_pwfield = '<!-- undef -->';
-    $refresh_form = qq{<form method="GET">
-                   <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn_text}">
+    $hiddenPasswordField = '<!-- undef -->';
+    $refreshForm = qq{<form method="GET">
+                   <input id="refreshbtn" type="submit" value="$textStrings{refresh_btn_text}">
                 </form>};
-    $idval = $id_cookie->value;
+    $IDCookieValue = $IDCookie->value;
 
-    if ($idval =~ /^([\w]+)$/){
-        $idval = $1;
+    if ($IDCookieValue =~ /^([\w]+)$/){
+        $IDCookieValue = $1;
     }
 
     if ($logout){
-        $delete_id_cookie = CGI::Cookie->new(
-            -name  => 'id',
-            -value => $idval, 
-            -expires => '-1d',
-            '-max-age' => '-1d',
-            -domain => ".$hostname",
-            -path      => '/',
-            -secure   => 1,
-            -httponly => 1,
-            -samesite => 'Strict',
+        $deleteIDCookie = CGI::Cookie->new(
+            -name       => 'id',
+            -value      => $IDCookieValue,
+            -expires    => '-1d',
+            '-max-age'  => '-1d',
+            -domain     => ".$hostname",
+            -path       => '/',
+            -secure     => 1,
+            -httponly   => 1,
+            -samesite   => 'Strict',
         );
-        my $f = "$cookies_dir/$idval.txt";
+        my $f = "$cookiesDir/$IDCookieValue.txt";
         if (-e "$f"){
             unlink "$f" or die "Can't delete file :$!";
         }
-        print "Set-Cookie: $delete_id_cookie\n";
+        print "Set-Cookie: $deleteIDCookie\n";
     }
 }
 
 print "Cache-Control: no-store, must-revalidate\n";
-if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)){
-    
-    LoginCookieGen($id_cookie, $cookies_dir);
-    
-    if (defined $cgi_query_get->param('supprlien')){
-        my $pending_deletion = $cgi_query_get->param('supprlien');
-        my $linkfile_fn = "./l/$pending_deletion";
-        if (unlink UntaintCGIFilename($linkfile_fn)){ 
-            $deletion_notif = qq{<span id="success">$text_strings{link_del_ok}</span>};
+if (ValidCookie($IDCookie, $cookiesDir) or argon2id_verify($argon2idHash,$password)){
+
+    LoginCookieGen($IDCookie, $cookiesDir);
+
+    if (defined $CGIQueryGet->param('supprlien')){
+        my $pendingDeletion = $CGIQueryGet->param('supprlien');
+        my $linkFileFilename = "./l/$pendingDeletion";
+        if (unlink UntaintCGIFilename($linkFileFilename)){ 
+            $deletionNotif = qq{<span id="success">$textStrings{link_del_ok}</span>};
         }
         else {
-            $deletion_notif = qq{<span id="failure">$text_strings{link_del_failed} $linkfile_fn : $!</span>};
+            $deletionNotif = qq{<span id="failure">$textStrings{link_del_failed} $linkFileFilename : $!</span>};
         }
     }
 
-    if (defined $cgi_query_get->param('supprtout')){
+    if (defined $CGIQueryGet->param('supprtout')){
         rmtree('./l', {keep_root => 1, safe => 1});
-        $deletion_notif = qq{<span id="success">$text_strings{link_del_ok}</span>};
+        $deletionNotif = qq{<span id="success">$textStrings{link_del_ok}</span>};
     }
 
-    if (defined $cgi_query_get->param('mail')){
-        $link_asker = scalar $cgi_query_get->param('mail');
+    if (defined $CGIQueryGet->param('mail')){
+        $linkAsker = scalar $CGIQueryGet->param('mail');
 
-        if ( Email::Valid->address($link_asker) ){
-            $mailisok_notif = qq{<span id="success">$text_strings{addr} $link_asker $text_strings{addr_ok}</span>};
-            my $str_rand_obj = String::Random->new;
-            my $generated_form_filename = $str_rand_obj->randregex('\w{64}') . '.cgi';
-            my $href = "https://$hostname/cgi-bin/l/$generated_form_filename";
-            my $link_path 	 =  "./l/$generated_form_filename";
+        if ( Email::Valid->address($linkAsker) ){
+            $mailIsOkNotif = qq{<span id="success">$textStrings{addr} $linkAsker $textStrings{addr_ok}</span>};
+            my $StrRandObj = String::Random->new;
+            my $generatedFormFilename = $StrRandObj->randregex('\w{64}') . '.cgi';
+            my $hrefLink = "https://$hostname/cgi-bin/l/$generatedFormFilename";
+            my $linkPath 	 =  "./l/$generatedFormFilename";
 
-            open my $in, '<', $link_template_path or die "Can't read link template file: $!";
-            open my $out, '>', $link_path or die "Can't write to link file: $!";
+            open my $in, '<', $linkTemplatePath or die "Can't read link template file: $!";
+            open my $out, '>', $linkPath or die "Can't write to link file: $!";
             while( <$in> ) {
-                s/{link_user}/{$link_asker}/g;
+                s/{link_user}/{$linkAsker}/g;
                 print $out $_;
             }
             close $in or die;
-            chmod(0755,$link_path) or die;
+            chmod(0755,$linkPath) or die;
             close $out or die;
-            $linkgen_notif = qq{<span id="success">$text_strings{link_ok_for} $link_asker: </span><br><a target="_blank" rel="noopener noreferrer nofollow" href="$href">$href</a>};          
+            $linkGenNotif = qq{<span id="success">$textStrings{link_ok_for} $linkAsker: </span><br><a target="_blank" rel="noopener noreferrer nofollow" href="$href">$href</a>};          
+            if (defined $CGIQueryGet->param('notiflinkbymail')){
+                SendGpigeonMail($linkAsker,"[GPIGEON](Do not reply) Your encrypted form is ready","Greetings,\n\n\tAn encrypted form has been generated for you on $hostname.\n\tClick on the link below to fill in the form:\n\t$hrefLink\n\tIf you believe this mail is not meant for you, ignore it and mail the webmaster or admin about it.\n\nKind regards,\nGpigeon mailing system at $hostname.") or $sentMailNotif="$!" ;
+            }
         }
         else{
-            $mailisok_notif = qq{<span id="failure">$text_strings{addr} $link_asker $text_strings{addr_nok}.</span>};
+            $mailIsOkNotif = qq{<span id="failure">$textStrings{addr} $linkAsker $textStrings{addr_nok}.</span>};
         }
     }
 
-    opendir my $link_dir_handle, './l' or die "Can't open ./l: $!";
-    while (readdir $link_dir_handle) {
+    opendir my $linkDirHandle, './l' or die "Can't open ./l: $!";
+    while (readdir $linkDirHandle) {
         if ($_ ne '.' and $_ ne '..'){
-            my $linkfile_fn = $_;
-            my $linkstats = stat("./l/$linkfile_fn");
-            my $linkcdate = scalar localtime $linkstats->mtime;
-            if (open my $linkfile_handle , '<', "./l/$linkfile_fn"){
+            my $linkFileFilename = $_;
+            my $linkFileStats = stat("./l/$linkFileFilename");
+            my $linkCreationDate = scalar localtime $linkFileStats->mtime;
+            if (open my $linkFileHandle , '<', "./l/$linkFileFilename"){
                 for (1..2){
-                    $link_asker = readline $linkfile_handle;
-                    $link_asker =~ s/q\{(.*?)\}//i;
-                    $link_asker = $1;
+                    $linkAsker = readline $linkFileHandle;
+                    $linkAsker =~ s/q\{(.*?)\}//i;
+                    $linkAsker = $1;
                 }
-                close $linkfile_handle;
+                close $linkFileHandle;
                 
-                if (Email::Valid->address($link_asker)){
-                    push @created_links,
+                if (Email::Valid->address($linkAsker)){
+                    push @createdLinks,
                     qq{<tr>
-                        <td><a target="_blank" rel="noopener noreferrer nofollow" href="/cgi-bin/l/$linkfile_fn">$text_strings{here}</a></td>
-                        <td><a href="mailto:$link_asker?subject=$text_strings{mailto_subject}&body=$text_strings{mailto_body} http://$hostname/cgi-bin/l/$linkfile_fn">$link_asker</a></td>
-                        <td>$linkcdate</td>
-                        <td>
-                            <form method="POST">
-                                $hidden_pwfield
-                                <input type="hidden" name="supprlien" value="$linkfile_fn">
-                                <input id="deletelinkbtn" type="submit" value="$text_strings{delete_link_btn_text}">
-                            </form>
-                        </td>
-                    </tr>};
+                           <td><a target="_blank" rel="noopener noreferrer nofollow" href="/cgi-bin/l/$linkFileFilename">$textStrings{here}</a></td>
+                           <td><a href="mailto:$linkAsker?subject=$textStrings{mailto_subject}&body=$textStrings{mailto_body} http://$hostname/cgi-bin/l/$linkFileFilename">$linkAsker</a></td>
+                           <td>$linkCreationDate</td>
+                           <td>
+                               <form method="POST">
+                                   $hiddenPasswordField
+                                   <input type="hidden" name="supprlien" value="$linkFileFilename">
+                                   <input id="deletelinkbtn" type="submit" value="$textStrings{delete_link_btn_text}">
+                               </form>
+                           </td>
+                       </tr>};
                 }
             }
             else {
-                close $linkfile_handle;
-                die 'Content-type: text/plain', "\n\n", "Error: Can't open $linkfile_fn: $!";
+                close $linkFileHandle;
+                die 'Content-type: text/plain', "\n\n", "Error: Can't open $linkFileFilename: $!";
             }
         }
     }
-    closedir $link_dir_handle;
+    closedir $linkDirHandle;
 
     print 'Content-type: text/html',"\n\n",
     qq{<!DOCTYPE html>
@@ -289,89 +340,91 @@ if (ValidCookie($id_cookie, $cookies_dir) or argon2id_verify($argon2id_hash,$pw)
                 <link rel="stylesheet" type="text/css" href="/styles.css">
                 <meta http-equiv="content-type" content="text/html;charset=UTF-8">
                 <meta charset="UTF-8">
-                <title>$text_strings{mainpage_title}</title>
+                <title>$textStrings{mainpage_title}</title>
             </head>
             <body>
-                <h1>$text_strings{mainpage_title}</h1>
-                <p>$text_strings{web_greet_msg}</p>
+                <h1>$textStrings{mainpage_title}</h1>
+                <p>$textStrings{web_greet_msg}</p>
                 <form method="GET">
                     <input type="hidden" name="logout" value="1">
-                    <input id="logoutbtn" type="submit" value="$text_strings{logout_btn_text}">
+                    <input id="logoutbtn" type="submit" value="$textStrings{logout_btn_text}">
                 </form>
-                $refresh_form
+                $refreshForm
                 <hr>
                 <br>
                 <form method="POST">
-                    $hidden_pwfield
-                    $text_strings{link_asker_field_label}<br>
+                    $hiddenPasswordField
+                    $textStrings{linkAsker_field_label}<br>
                     <input id="mailfield" tabindex="1" type="text" name="mail">
-                    <input id="genlinkbtn" tabindex="2" type="submit" value="$text_strings{create_link_btn}">
+                    <input id="genlinkbtn" tabindex="2" type="submit" value="$textStrings{create_link_btn}">
+                    <label id="notiflinkbymail" for="notiflinkbymail">
+                        $textStrings{checkbox_notiflinkbymail}
+                        <input id="notiflinkbymail-check" type="checkbox" name="notiflinkbymail" value="1">
+                    </label>
                 </form>
-                $mailisok_notif
-                <br>
-                $linkgen_notif
+                $linkGenNotif
                 <hr>
                 <form method="POST">
-                    $hidden_pwfield
+                    $hiddenPasswordField
                     <input type="hidden" name="supprtout">
-                     <input id="deleteallbtn" type="submit" value="$text_strings{delete_links_btn_text}">
+                    <input id="deleteallbtn" type="submit" value="$textStrings{delete_links_btn_text}">
                 </form>
-                $deletion_notif
-                <tablei id="linkstable">
+                $deletionNotif
+                <table id="linkstable">
                     <tr>
-                        <th>&#x1f517; $text_strings{theader_link}</th>
-                        <th>&#x1f4e7; $text_strings{theader_for}</th>
-                        <th>&#x1f4c5; $text_strings{theader_cdate}</th>
-                        <th>&#10060; $text_strings{theader_deletion}</th>
+                        <th>&#x1f517; $textStrings{theader_link}</th>
+                        <th>&#x1f4e7; $textStrings{theader_for}</th>
+                        <th>&#x1f4c5; $textStrings{theader_cdate}</th>
+                        <th>&#10060; $textStrings{theader_deletion}</th>
                     </tr>
-                    @created_links
+                    @createdLinks
                 </table>
             </body>
         </html>};
 }
 else{
-    if (not $logout and defined $id_cookie){
-        $login_notif = q{<span id="failure">You got a cookie problem.<br>
+    if (not $logout and defined $IDCookie){
+        $loginNotif = q{<span id="failure">You got a cookie problem.<br>
         <b>Clean them and log again</b></span>};
     }
-    if (length($pw) > 0){
-        $login_notif = q{<span id="failure">Your typed password seems<br>
+    if (length($password) > 0){
+        $loginNotif = q{<span id="failure">Your typed password seems<br>
         to be incorrect.<br>Try again.</span>};
     }
     
     print "Content-type: text/html\n\n",
-qq{<!DOCTYPE html>
-<html lang="fr">
-<head>
-	<meta charset="utf-8">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" type="text/css" href="/styles.css">
-<title>$text_strings{landingpage_title}</title>
-</head>
-<body>
-	<h1>$text_strings{landingpage_title}</h1>
-<form action="/cgi-bin/gpigeon.cgi" method="POST">
-  <table id="loginbox">
-	  <tbody>
-		  <tr>
-			  <td>Password :</td> 		  
-			  <td><input type="password" name="password"></td>
-		  </tr>
-          <tr>
-                <td></td>
-                <td id="loginerr">$login_notif</td>
-          </tr>
-		  <tr id="authbtn">
-			  <td></td>
-			  <td><input type="submit" value="$text_strings{loginbtn}"></td>
-		  </tr>
-	  </tbody>
-  </table>
- </form>
+    qq{<!DOCTYPE html>
+    <html lang="fr">
+        <head>
+            <meta charset="utf-8">
+            <link rel="icon" type="image/x-icon" href="/favicon.ico">
+            <link rel="stylesheet" type="text/css" href="/styles.css">
+            <title>$textStrings{landingpage_title}</title>
+        </head>
+        <body>
+            <h1>$textStrings{landingpage_title}</h1>
+            <form action="/cgi-bin/gpigeon.cgi" method="POST">
+                <table id="loginbox">
+                  <tbody>
+                      <tr>
+                          <td>Password :</td> 		  
+                          <td><input type="password" name="password"></td>
+                      </tr>
+                      <tr>
+                            <td></td>
+                            <td id="loginerr">$loginNotif</td>
+                      </tr>
+                      <tr id="authbtn">
+                          <td></td>
+                          <td><input type="submit" value="$textStrings{loginbtn}"></td>
+                      </tr>
+                  </tbody>
+                </table>
+            </form>
 
-<p><a href="http://git.les-miquelots.net/gpigeon"
-	   title="gpigeon download link">Source code here.</a> It is similar to <a target="_blank" rel="noopener nofollow noreferrer" href="https://hawkpost.co/">hawkpost.co</a>.</p>
+            <p><a href="http://git.les-miquelots.net/gpigeon"
+               title="gpigeon download link">Source code here.</a> It is similar to <a target="_blank" rel="noopener nofollow noreferrer" href="https://hawkpost.co/">hawkpost.co</a>.</p>
 
-</body>
-</html>};
+        </body>
+    </html>};
 }

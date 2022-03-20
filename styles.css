@@ -23,6 +23,8 @@ h1, #msgbelow{
     border-bottom:none;
 }
 
+#notiflinkbymail {display:block;padding:3px}
+
 #linkstable td{
     text-align:center;
     padding: 5px ;
@@ -177,4 +179,9 @@ h1, #msgbelow{
     #sendbtn {
         display:inline
     }
+
+    #notiflinkbymail, #notiflinkbymail input {
+		display:block;
+		padding:10px;
+	}
 }
