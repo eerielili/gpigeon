@@ -363,6 +363,8 @@ if (ValidCookie($IDCookie, $cookiesDir) or argon2id_verify($argon2idHash,$passwo
                     </label>
                 </form>
                 $linkGenNotif
+                <br>
+                $sentMailNotif
                 <hr>
                 <form method="POST">
                     $hiddenPasswordField
