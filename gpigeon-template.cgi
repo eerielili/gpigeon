@@ -31,9 +31,9 @@ use File::stat;
 delete @ENV{qw(IFS PATH CDPATH BASH_ENV)};
 $ENV{'PATH'} = q{/usr/bin};
 my $hostname = $ENV{'SERVER_NAME'};	
-my $rIP = $ENV{REMOTE_ADDR};
-my $uagent  = $ENV{HTTP_USER_AGENT};
-my %text_strings = (
+my $remoteIP = $ENV{REMOTE_ADDR};
+my $userAgent  = $ENV{HTTP_USER_AGENT};
+my %textStrings = (
     addr                          => 'Address', 
     addr_ok                       => 'is valid!', 
     addr_nok                      => 'is not valid !',
@@ -54,7 +54,7 @@ my %text_strings = (
     here                          => 'here',
     landingpage_title             => 'GPIGEON - Log in',
     loginbtn                      => 'Log in',
-    link_asker_field_label        => "Asker's mail :",
+    linkAsker_field_label         => "Asker's mail :",
     link_del_ok                   => 'Successful removal !',
     link_legend_textarea          => 'Type your message below :',
     link_ok_for                   => 'Generated a link for',
@@ -75,51 +75,51 @@ my %text_strings = (
 );
 
 sub GetFileTable {
-    my ($dir ,$hidden_loginfield, $adminpan_field) = @_;
+    my ($dir ,$hiddenLoginField, $adminPanelField) = @_;
     my @table = ();
-    opendir my $link_dir_handle, "$dir" or die "Can't open $dir: $!";
-    while (readdir $link_dir_handle) {
+    opendir my $linkDirHandle, "$dir" or die "Can't open $dir: $!";
+    while (readdir $linkDirHandle) {
         if ($_ ne '.' and $_ ne '..'){
-            my $linkfile_fn = $_;
-	    my $linkstats= stat("$dir/$linkfile_fn"); 
-	    my $tiem = scalar localtime $linkstats->mtime;
-            my $link_asker = undef;
-            if (open my $linkfile_handle , '<', "$dir/$linkfile_fn"){
+            my $pendingDeletion = $_;
+	    my $linkFileStats= stat("$dir/$pendingDeletion"); 
+	    my $time = scalar localtime $linkFileStats->mtime;
+            my $linkAsker = undef;
+            if (open my $linkFileHandle , '<', "$dir/$pendingDeletion"){
                 for (1..2){
-                    $link_asker = readline $linkfile_handle;
-                    $link_asker =~ s/q\{(.*?)\}//i;
-                    $link_asker = $1;
+                    $linkAsker = readline $linkFileHandle;
+                    $linkAsker =~ s/q\{(.*?)\}//i;
+                    $linkAsker = $1;
                 }
-                close $linkfile_handle;
-		my $for_field_body = qq{<a href="mailto:$link_asker?subject=$text_strings{mailto_subject}&body=$text_strings{mailto_body} http://$ENV{SERVER_NAME}/cgi-bin/$dir/$linkfile_fn">$link_asker</a>};
+                close $linkFileHandle;
+		my $forFieldBody = qq{<a href="mailto:$linkAsker?subject=$textStrings{mailto_subject}&body=$textStrings{mailto_body} http://$ENV{SERVER_NAME}/cgi-bin/$dir/$pendingDeletion">$linkAsker</a>};
                 
-		if (not defined $link_asker){
-		    $for_field_body = $text_strings{addr_unknown};
+		if (not defined $linkAsker){
+		    $forFieldBody = $textStrings{addr_unknown};
 
                 }
                 #create links table html
                 push @table,
                 qq{<tr>
-                    <td><a title="This link has been created on $tiem" href="/cgi-bin/$dir/$linkfile_fn" target="_blank" rel="noopener noreferrer nofollow">ici</a></td>
-                    <td>$for_field_body</td>
+                    <td><a title="This link has been created on $time" href="/cgi-bin/$dir/$pendingDeletion" target="_blank" rel="noopener noreferrer nofollow">ici</a></td>
+                    <td>$forFieldBody</td>
                     <td>
                         <form method="POST">
-                    	    $hidden_loginfield
-                            $adminpan_field
-			    <input type="hidden" name="supprlien" value="$dir/$linkfile_fn">
-                            <input id="deletelinkbtn" type="submit" value="$text_strings{delete_link_btn_text}">
+                    	    $hiddenLoginField
+                            $adminPanelField
+			    <input type="hidden" name="supprlien" value="$dir/$pendingDeletion">
+                            <input id="deletelinkbtn" type="submit" value="$textStrings{delete_link_btn_text}">
                         </form>
                     </td>
                 </tr>};
 
             }
             else {
-                close $linkfile_handle;
-                die 'Content-type: text/plain', "\n\n", "Error: Can't open $linkfile_fn: $!";
+                close $linkFileHandle;
+                die 'Content-type: text/plain', "\n\n", "Error: Can't open $pendingDeletion: $!";
             }
         }
     }
-    closedir $link_dir_handle;
+    closedir $linkDirHandle;
     return @table;
 }
 
@@ -139,17 +139,17 @@ sub DbGetLine {
 }
 
 sub LoginOk {
-    my ($dbh, $username, $pass, $userid, $magic_cookie, $uid_cookie, $cookiesdir) = @_;
+    my ($dbh, $username, $pass, $userID, $magicCookie, $UIDCookie, $cookiesDir) = @_;
     my $loginsuccess = PasswdLogin($dbh, $username, $pass);
     if (not defined $loginsuccess){
-        $loginsuccess = CookieLogin($userid, $magic_cookie, $uid_cookie, $cookiesdir);
+        $loginsuccess = CookieLogin($userID, $magicCookie, $UIDCookie, $cookiesDir);
     }
     return $loginsuccess;
 }
 
 sub ListUsers {
 	my ($dbh) = shift;
-	my @userstable = ();
+	my @usersTable = ();
 	my $prep = $dbh->prepare(q{SELECT name,mail from pigeons;} );
 	my $exec = $prep->execute() or die $DBI::errstr;
 
@@ -159,27 +159,27 @@ sub ListUsers {
 
 	while (my @rows = $prep->fetchrow_array()) {
 		#print "$rows[0]\t$rows[1]\n";
-		push @userstable,
+		push @usersTable,
 		qq{<tr>
 			<td>$rows[0]</td>
 			<td>$rows[1]</td>
 		</tr>};
 	}
-	return @userstable;
+	return @usersTable;
 }
 
 sub CookieLogin {
-    my ($userid, $magic_cookie, $uid_cookie, $cookiesdir) = @_;
-    if (not $userid =~ /^([0-9]+)$/){
+    my ($userID, $magicCookie, $UIDCookie, $cookiesDir) = @_;
+    if (not $userID =~ /^([0-9]+)$/){
         return;
     }
 
-    if (not defined $magic_cookie or not defined $uid_cookie){
+    if (not defined $magicCookie or not defined $UIDCookie){
         return;
     }
 
-    my ($rip_line, $ua_line, $id_line, $uid_line) = undef;
-    my $filename = $magic_cookie->value;
+    my ($remoteIPLine, $UserAgentLine, $IDLine, $UIDLine) = undef;
+    my $filename = $magicCookie->value;
     if ($filename =~ /^([\w]+)$/){
         $filename = $1;
     }
@@ -187,32 +187,32 @@ sub CookieLogin {
         return;
     }
 
-    my $login_cookiefile = "$cookiesdir/$userid/$filename.txt";
-    if (-e $login_cookiefile){
-        open my $in, '<', $login_cookiefile or die "can't read file: $!";
-        $rip_line = readline $in;
-        $ua_line = readline $in;
-        $id_line = readline $in;
-        $uid_line = readline $in;
+    my $loginCookieFile = "$cookiesDir/$userID/$filename.txt";
+    if (-e $loginCookieFile){
+        open my $in, '<', $loginCookieFile or die "can't read file: $!";
+        $remoteIPLine = readline $in;
+        $UserAgentLine = readline $in;
+        $IDLine = readline $in;
+        $UIDLine = readline $in;
         close $in;
-        chomp ($rip_line, $ua_line, $id_line); # chomp the \n
+        chomp ($remoteIPLine, $UserAgentLine, $IDLine); # chomp the \n
     }
     else{
         return;
     }
 
-    my %id_line_cookie = CGI::Cookie->parse($id_line);
-    my %uid_line_cookie = CGI::Cookie->parse($uid_line);
-    my $id_value = $id_line_cookie{'id'}->value;
-    my $uid_value = $uid_line_cookie{'uid'}->value;
+    my %IDLineCookie = CGI::Cookie->parse($IDLine);
+    my %UIDLineCookie = CGI::Cookie->parse($UIDLine);
+    my $IDValue = $IDLineCookie{'id'}->value;
+    my $UIDValue = $UIDLineCookie{'uid'}->value;
 
-    my $ip_match = $rip_line cmp $rIP;
-    my $ua_match = $ua_line cmp $uagent;
-    my $uid_match = $uid_cookie->value cmp $uid_value;
-    my $id_match = $magic_cookie->value cmp $id_value;
+    my $IPMatch = $remoteIPLine cmp $remoteIP;
+    my $UserAgentMatch = $UserAgentLine cmp $userAgent;
+    my $UIDMatch = $UIDCookie->value cmp $UIDValue;
+    my $IDMatch = $magicCookie->value cmp $IDValue;
 
-    if ($ip_match == 0 and $ua_match == 0 and $uid_match == 0 and $id_match == 0){
-        return $userid;
+    if ($IPMatch == 0 and $UserAgentMatch == 0 and $UIDMatch == 0 and $IDMatch == 0){
+        return $userID;
     }
     return;
 } 
@@ -230,20 +230,20 @@ sub PasswdLogin {
 			return;
 		}
 	} 
-	my ($hash, $userid) = undef;	
-	my $selecthash = qq{SELECT pass from pigeons where mail='$username' or name='$username';};
-	$hash = DbGetLine($dbh, $selecthash);
+	my ($hash, $userID) = undef;	
+	my $selectHash = qq{SELECT pass from pigeons where mail='$username' or name='$username';};
+	$hash = DbGetLine($dbh, $selectHash);
 	if (defined $hash and length($hash) > 1){
 		if(argon2id_verify($hash,$pass)){
-			my $selectuserid = qq{SELECT userid from pigeons where pass='$hash';};
-			$userid = DbGetLine($dbh, $selectuserid);
-			if ($userid =~ /^([0-9]+)$/){
-				$userid = $1;
+			my $selectuserID = qq{SELECT userID from pigeons where pass='$hash';};
+			$userID = DbGetLine($dbh, $selectuserID);
+			if ($userID =~ /^([0-9]+)$/){
+				$userID = $1;
 			}
 			else {
 				return;
 			}
-			return $userid; # as an userid is always > 0, we can use it as return value
+			return $userID; # as an userID is always > 0, we can use it as return value
 		} else {
 			return;
 		}
@@ -256,41 +256,41 @@ sub PasswdLogin {
 }
 
 sub LoginCookieGen {
-    my ($userid, $magic_cookie, $cookiesdir) = @_;
-    if (not defined $magic_cookie){
-        my $str_rand_obj = String::Random->new;
-        my $val = $str_rand_obj->randregex('\w{64}');
-        if (not -d "$cookiesdir/$userid"){
-            mkpath("$cookiesdir/$userid");
+    my ($userID, $magicCookie, $cookiesDir) = @_;
+    if (not defined $magicCookie){
+        my $StrRandObj = String::Random->new;
+        my $val = $StrRandObj->randregex('\w{64}');
+        if (not -d "$cookiesDir/$userID"){
+            mkpath("$cookiesDir/$userID");
         }
-        my $cookiefile = "$cookiesdir/$userid/$val.txt";
-        my $new_magic_cookie = CGI::Cookie->new(
-            -name  => 'id',
-            -value => $val, 
-            -expires => '+1y',
-            '-max-age' => '+1y',
-            -domain => ".$ENV{'SERVER_NAME'}",
-            -path      => '/',
-            -secure   => 1,
-            -httponly => 1,
-            -samesite => 'Strict',
+        my $cookieFile = "$cookiesDir/$userID/$val.txt";
+        my $magicMagicCookie = CGI::Cookie->new(
+            -name       => 'id',
+            -value      => $val, 
+            -expires    => '+1y',
+            '-max-age'  => '+1y',
+            -domain     => ".$ENV{'SERVER_NAME'}",
+            -path       => '/',
+            -secure     => 1,
+            -httponly   => 1,
+            -samesite   => 'Strict',
         ) or die "Can't create cookie $!";
-        my $new_userid_cookie = CGI::Cookie->new(
-            -name  => 'uid',
-            -value => $userid, 
-            -expires => '+1y',
-            '-max-age' => '+1y',
-            -domain => ".$ENV{'SERVER_NAME'}",
-            -path      => '/',
-            -secure   => 1,
-            -httponly => 1,
-            -samesite => 'Strict',
+        my $newUserIDCookie = CGI::Cookie->new(
+            -name       => 'uid',
+            -value      => $userID, 
+            -expires    => '+1y',
+            '-max-age'  => '+1y',
+            -domain     => ".$ENV{'SERVER_NAME'}",
+            -path       => '/',
+            -secure     => 1,
+            -httponly   => 1,
+            -samesite   => 'Strict',
        ) or die "Can't create cookie $!";
-       open my $out, '>', $cookiefile or die "Can't write to $cookiefile: $!";
-           print $out "$rIP\n$uagent\n$new_magic_cookie\n$new_userid_cookie";
+       open my $out, '>', $cookieFile or die "Can't write to $cookieFile: $!";
+           print $out "$remoteIP\n$userAgent\n$magicMagicCookie\n$newUserIDCookie";
        close $out;
-       print "Set-Cookie: $new_magic_cookie\n";
-       print "Set-Cookie: $new_userid_cookie\n";
+       print "Set-Cookie: $magicMagicCookie\n";
+       print "Set-Cookie: $newUserIDCookie\n";
     }
 }
 
@@ -309,9 +309,9 @@ sub UntaintCGIFilename {
 sub GetRFC822Date {
 	# https://stackoverflow.com/a/40149475, Daniel VÃritÃ
 	use POSIX qw(strftime locale_h);
-	my $old_locale = setlocale(LC_TIME, "C");
+	my $oldLocale = setlocale(LC_TIME, "C");
 	my $date = strftime("%a, %d %b %Y %H:%M:%S %z", localtime(time()));
-	setlocale(LC_TIME, $old_locale);
+	setlocale(LC_TIME, $oldLocale);
 	return $date;
 }
 
@@ -321,20 +321,20 @@ sub SendGpigeonMail {
 	use Net::SMTPS;
 	use MIME::Entity;
 	my $rfc822date = GetRFC822Date() or die;
-	my $HAS_MAILSERVER = 0;
+	my $HasMailserver = 0;
     my $mailsender = q{sender_addr_goes_here};
-    my $mailsender_smtp = q{smtp_domain_goes_here};
-    my $mailsender_port = q{smtp_port_goes_here};
-    my $mailsender_pw = q{sender_pw_goes_here};
+    my $mailSenderSMTP = q{smtp_domain_goes_here};
+    my $mailSenderPort = q{smtp_port_goes_here};
+    my $mailSenderPassword = q{sender_pw_goes_here};
 	my $smtp     = undef;
-	if ($HAS_MAILSERVER){
+	if ($HasMailserver){
 		$smtp = Net::SMTP->new(Host => 'localhost') or die; 
 	}
 	else {
-		$smtp = Net::SMTPS->new($mailsender_smtp, Port => $mailsender_port, doSSL => 'ssl', Debug_SSL => 0); 
-		$smtp->auth($mailsender, $mailsender_pw) or die;
+		$smtp = Net::SMTPS->new($mailSenderSMTP, Port => $mailSenderPort, doSSL => 'ssl', Debug_SSL => 0); 
+		$smtp->auth($mailsender, $mailSenderPassword) or die;
 	}
-	my $notifylinkbymail_data = MIME::Entity->build(
+	my $notifyLinkByMailData = MIME::Entity->build(
 		Date => $rfc822date,
 		From => $mailsender,
 		To   => $recipient,
@@ -343,7 +343,7 @@ sub SendGpigeonMail {
 		Data => [$message]) or die;
 	$smtp->mail($mailsender) or die "Net::SMTP module has broke: $!.";
 	if ($smtp->to($recipient)){
-	    $smtp->data($notifylinkbymail_data->stringify);
+	    $smtp->data($notifyLinkByMailData->stringify);
 	    $smtp->dataend();
 	    $smtp->quit();
 	}
@@ -353,63 +353,63 @@ sub SendGpigeonMail {
 }
 
 
-my $db_path                             = q{db_path_goes_here};
-my $cookiesdir                          = q{cookies_dir_goes_here};
-my $link_template_path                  = q{link_template_path_goes_here};
-my $invites_template_path               = q{invite_template_goes_here};
+my $dbPath                             = q{dbPath_goes_here};
+my $cookiesDir                          = q{cookiesDir_goes_here};
+my $linkTemplatePath                  = q{linkTemplatePath_goes_here};
+my $invitesTemplatePath               = q{invite_template_goes_here};
 
-my $cgi_query_get                       = CGI->new;
-my $username                            = $cgi_query_get->param('username');
-my $pass                                = $cgi_query_get->param('password');
-my $disconnect                          = $cgi_query_get->param('disconnect');
-my $adminpanselect                      = $cgi_query_get->param('adminpan');
-my ( $checkedornot, $hidden_loginfield, $magic_cookie, 
-    $uid_cookie, $idval, $refresh_form, 
-    $userid)                            = undef;
-my $linkgen_notif                       = my $sentmail_notif = my $mailisok_notif = my $deletion_notif = my $login_notif = my $adminpan_field = my $adminbtn = '<!-- undef notif -->';
-my @created_links                       = ();
-my %cur_cookies                         = CGI::Cookie->fetch;
-$uid_cookie                             = $cur_cookies{'uid'};
-$magic_cookie                           = $cur_cookies{'id'};
-my $dbh                                 = DBI->connect("DBI:SQLite:dbname=$db_path", undef, undef, { RaiseError => 1})
+my $cgiQueryGet                       = CGI->new;
+my $username                            = $cgiQueryGet->param('username');
+my $pass                                = $cgiQueryGet->param('password');
+my $disconnect                          = $cgiQueryGet->param('disconnect');
+my $adminpanselect                      = $cgiQueryGet->param('adminpan');
+my ( $checkedOrNot, $hiddenLoginField, $magicCookie, 
+    $UIDCookie, $ID, $refreshForm, 
+    $userID)                            = undef;
+my $linkGenNotif                       = my $sentMailNotif = my $mailIsOkNotif = my $deletionNotif = my $loginNotif = my $adminPanelField = my $adminbtn = '<!-- undef notif -->';
+my @createdLinks                       = ();
+my %currentCookies                         = CGI::Cookie->fetch;
+$UIDCookie                             = $currentCookies{'uid'};
+$magicCookie                           = $currentCookies{'id'};
+my $dbh                                 = DBI->connect("DBI:SQLite:dbname=$dbPath", undef, undef, { RaiseError => 1})
                                             or die $DBI::errstr;
 
 if ($adminpanselect){
-	$adminpan_field = q{<input type="hidden" name="adminpan" value="1">};
+	$adminPanelField = q{<input type="hidden" name="adminpan" value="1">};
 }
 
 
-if (not defined $magic_cookie){ # cookie is not set
-    $hidden_loginfield = qq{<input type="hidden" name="username" value="$username"><input type="hidden" name="password" value="$pass">};
+if (not defined $magicCookie){ # cookie is not set
+    $hiddenLoginField = qq{<input type="hidden" name="username" value="$username"><input type="hidden" name="password" value="$pass">};
 
-    $refresh_form = qq{<form method="POST">
-                           $hidden_loginfield
-                           $adminpan_field
-                           <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn}">
+    $refreshForm = qq{<form method="POST">
+                           $hiddenLoginField
+                           $adminPanelField
+                           <input id="refreshbtn" type="submit" value="$textStrings{refresh_btn}">
                        </form>};
 }
 else{
-    $hidden_loginfield = qq{<!-- undef -->};
-    $refresh_form = qq{<form method="GET">
-                           $adminpan_field
-                           <input id="refreshbtn" type="submit" value="$text_strings{refresh_btn}">
+    $hiddenLoginField = qq{<!-- undef -->};
+    $refreshForm = qq{<form method="GET">
+                           $adminPanelField
+                           <input id="refreshbtn" type="submit" value="$textStrings{refresh_btn}">
                        </form>};
-   $idval = $magic_cookie->value;
-   if ($idval =~ /^([\w]+)$/){
-	   $idval = $1;
+   $ID = $magicCookie->value;
+   if ($ID =~ /^([\w]+)$/){
+	   $ID = $1;
    }
 
-   $userid = $uid_cookie->value;
-   if ($userid =~ /^([0-9]+)$/){
-	   $userid = $1;
+   $userID = $UIDCookie->value;
+   if ($userID =~ /^([0-9]+)$/){
+	   $userID = $1;
    }
 
 }
 
-if ($disconnect and defined $magic_cookie){ # if we disconnect and cookie is active
-    my $delete_id_cookie = CGI::Cookie->new(
+if ($disconnect and defined $magicCookie){ # if we disconnect and cookie is active
+    my $deleteIDCookie = CGI::Cookie->new(
         -name  => 'id',
-        -value => $idval, 
+        -value => $ID, 
         -expires => '-1d',
         '-max-age' => '-1d',
         -domain => ".$hostname",
@@ -418,9 +418,9 @@ if ($disconnect and defined $magic_cookie){ # if we disconnect and cookie is act
         -httponly => 1,
         -samesite => 'Strict',
     );
-    my $delete_uid_cookie = CGI::Cookie->new(
+    my $deleteUIDCookie = CGI::Cookie->new(
         -name  => 'uid',
-        -value => $userid, 
+        -value => $userID, 
         -expires => '-1d',
         '-max-age' => '-1d',
         -domain => ".$hostname",
@@ -429,281 +429,281 @@ if ($disconnect and defined $magic_cookie){ # if we disconnect and cookie is act
         -httponly => 1,
         -samesite => 'Strict',
     );
-    my $f = "$cookiesdir/$userid/$idval.txt";
+    my $f = "$cookiesDir/$userID/$ID.txt";
     if (-e "$f"){
         unlink "$f" or die "cant delete cookie at $f :$!\n"; # delet it
     }       
-    print "Set-Cookie: $delete_uid_cookie\n";
-    print "Set-Cookie: $delete_id_cookie\n";
+    print "Set-Cookie: $deleteUIDCookie\n";
+    print "Set-Cookie: $deleteIDCookie\n";
 }
 
 
 
-my $loginok = LoginOk($dbh, $username, $pass, $userid, $magic_cookie, $uid_cookie, $cookiesdir);
+my $loginOK = LoginOk($dbh, $username, $pass, $userID, $magicCookie, $UIDCookie, $cookiesDir);
 print "Cache-Control: no-store, must-revalidate\n";
-if($loginok){
+if($loginOK){
 
-    $userid           = $loginok; 
-    my $user_mailaddr = DbGetLine($dbh, qq{SELECT mail from pigeons where userid='$userid';});
-    my $nick          = DbGetLine($dbh, qq{SELECT name from pigeons where userid='$userid';});
-    my $isadmin       = DbGetLine($dbh, qq{SELECT isadmin from pigeons where userid='$userid';});
-    LoginCookieGen($userid, $magic_cookie, $cookiesdir);
+    $userID           = $loginOK; 
+    my $userMailAddr = DbGetLine($dbh, qq{SELECT mail from pigeons where userID='$userID';});
+    my $nick          = DbGetLine($dbh, qq{SELECT name from pigeons where userID='$userID';});
+    my $isAdmin       = DbGetLine($dbh, qq{SELECT isadmin from pigeons where userID='$userID';});
+    LoginCookieGen($userID, $magicCookie, $cookiesDir);
 
-    if ($isadmin){
+    if ($isAdmin){
         $adminbtn = qq{<form method="POST">
-                           $hidden_loginfield
+                           $hiddenLoginField
                            <input type="hidden" name="adminpan" value="1">
                            <input id="adminpanbtn" type="submit" value="Admin panel">
                        </form>};
-        if (not -d "i/$userid"){
-            mkpath("./i/$userid");
+        if (not -d "i/$userID"){
+            mkpath("./i/$userID");
         }
     }
 
-    if (not -d "./l/$userid"){
-        mkpath("./l/$userid");
+    if (not -d "./l/$userID"){
+        mkpath("./l/$userID");
     }
 
-    if (defined $cgi_query_get->param('supprlien')){
-        my $pending_deletion = $cgi_query_get->param('supprlien');
+    if (defined $cgiQueryGet->param('supprlien')){
+        my $pendingDeletion = $cgiQueryGet->param('supprlien');
         #make sure smart and malicious users don't go deleting other things
-        if ($pending_deletion =~ /^l\/$userid\/([\w]+)\.cgi$/ or $pending_deletion =~ /^i\/$userid\/([\w]+)\.cgi$/) {
-            if (unlink UntaintCGIFilename($pending_deletion)){ 
-                $deletion_notif=qq{<span id="success">$text_strings{link_del_ok}</span>};
+        if ($pendingDeletion =~ /^l\/$userID\/([\w]+)\.cgi$/ or $pendingDeletion =~ /^i\/$userID\/([\w]+)\.cgi$/) {
+            if (unlink UntaintCGIFilename($pendingDeletion)){ 
+                $deletionNotif=qq{<span id="success">$textStrings{link_del_ok}</span>};
             }
             else {
-                $deletion_notif=qq{<span id="failure">$text_strings{link_del_failed} $pending_deletion: $!</span>};
+                $deletionNotif=qq{<span id="failure">$textStrings{link_del_failed} $pendingDeletion: $!</span>};
             }
         }
     }
 
-    if (defined $cgi_query_get->param('supprtout')){
-        rmtree("./l/$userid", {keep_root=>1, safe=>1});
-        $deletion_notif=qq{<span id="success">$text_strings{link_del_ok}</span>};
+    if (defined $cgiQueryGet->param('supprtout')){
+        rmtree("./l/$userID", {keep_root=>1, safe=>1});
+        $deletionNotif=qq{<span id="success">$textStrings{link_del_ok}</span>};
     }
     
-    if (defined $cgi_query_get->param('delallinvites')){
-        rmtree("./i/$userid", {keep_root=>1, safe=>1});
-        $deletion_notif=qq{<span id="success">$text_strings{link_del_ok}</span>};
+    if (defined $cgiQueryGet->param('delallinvites')){
+        rmtree("./i/$userID", {keep_root=>1, safe=>1});
+        $deletionNotif=qq{<span id="success">$textStrings{link_del_ok}</span>};
     }
 
-    if (defined $cgi_query_get->param('geninv')){
-        my $invite_asker = scalar $cgi_query_get->param('opt-mail');
-        $mailisok_notif = qq{<span id="failure">$text_strings{addr} $invite_asker $text_strings{addr_nok}</span>};
-        my $str_rand_obj = String::Random->new;
-        my $random_fn = $str_rand_obj->randregex('\w{64}');
-        my $GENERATED_FORM_FILENAME = "$random_fn.cgi";
-        my $HREF_LINK   	 = "https://$hostname/cgi-bin/i/$userid/$GENERATED_FORM_FILENAME";
-        my $INVITES_PATH 	 =  "./i/$userid/$GENERATED_FORM_FILENAME";
+    if (defined $cgiQueryGet->param('geninv')){
+        my $inviteAsker = scalar $cgiQueryGet->param('opt-mail');
+        $mailIsOkNotif = qq{<span id="failure">$textStrings{addr} $inviteAsker $textStrings{addr_nok}</span>};
+        my $StrRandObj = String::Random->new;
+        my $randomFilename = $StrRandObj->randregex('\w{64}');
+        my $generatedFormFilename = "$randomFilename.cgi";
+        my $hrefLink   	 = "https://$hostname/cgi-bin/i/$userID/$generatedFormFilename";
+        my $invitesPath 	 =  "./i/$userID/$generatedFormFilename";
 
-        open my $in, '<', $invites_template_path or die "Can't read link template file: $!";
-        open my $out, '>', $INVITES_PATH or die "Can't write to link file: $!";
+        open my $in, '<', $invitesTemplatePath or die "Can't read link template file: $!";
+        open my $out, '>', $invitesPath or die "Can't write to link file: $!";
         while( <$in> ) {
-            if ( Email::Valid->address($invite_asker) ){
-                $mailisok_notif = qq{<span id="success">$text_strings{addr} $invite_asker $text_strings{addr_ok}</span>};
-                s/mail = undef;/mail = q{$invite_asker};/g;
-                s/{mailfield_goes_here}/{<input type="text" name="mailaddr" value="$invite_asker" disabled>}/g;
+            if ( Email::Valid->address($inviteAsker) ){
+                $mailIsOkNotif = qq{<span id="success">$textStrings{addr} $inviteAsker $textStrings{addr_ok}</span>};
+                s/mail = undef;/mail = q{$inviteAsker};/g;
+                s/{mailfield_goes_here}/{<input type="text" name="mailaddr" value="$inviteAsker" disabled>}/g;
             }
 
             s/{mailfield_goes_here}/{<input type="text" name="mailaddr" placeholder="Your mail address used for GPG" required>}/g;
-            if (defined $cgi_query_get->param('mailnotif') ){
+            if (defined $cgiQueryGet->param('mailnotif') ){
                 s/EMAIL_NOTIF = .*/EMAIL_NOTIF = q{1};/g	
             }
 
-            if (defined $cgi_query_get->param('adminprom') ){
+            if (defined $cgiQueryGet->param('adminprom') ){
                 s/is_admin_goes_here/1/g	
             }
             else{
                 s/is_admin_goes_here/0/g	
             }
-            s/{user_mailaddr_goes_here}/{$user_mailaddr}/g;
+            s/{userMailAddr_goes_here}/{$userMailAddr}/g;
             print $out $_;
         }
 
         close $in or die;
-        chmod(0755,$INVITES_PATH) or die;
+        chmod(0755,$invitesPath) or die;
         close $out or die;
 
-        $linkgen_notif = qq{<span id="success">$text_strings{link_generated_ok}: <br><a target="_blank" rel="noopener noreferrer nofollow" href="$HREF_LINK">$HREF_LINK</a></span>};          
-        if (defined $cgi_query_get->param('invitemail') and Email::Valid->address($invite_asker)){
-            SendGpigeonMail($invite_asker,"[GPIGEON](Do not reply) You have been invited to $hostname","Greetings,\n\n\tYou have been invited to create an GPIGEON account on $hostname.\n\tClick on the link below to fill in the form:\n\t$HREF_LINK\n\tIf you believe this mail is not meant for you, ignore it and mail the webmaster or admin\@les-miquelots.net about it.\n\nKind regards,\nGpigeon mailing system at $hostname.") or $sentmail_notif = "$!";
+        $linkGenNotif = qq{<span id="success">$textStrings{link_generated_ok}: <br><a target="_blank" rel="noopener noreferrer nofollow" href="$hrefLink">$hrefLink</a></span>};          
+        if (defined $cgiQueryGet->param('invitemail') and Email::Valid->address($inviteAsker)){
+            SendGpigeonMail($inviteAsker,"[GPIGEON](Do not reply) You have been invited to $hostname","Greetings,\n\n\tYou have been invited to create an GPIGEON account on $hostname.\n\tClick on the link below to fill in the form:\n\t$hrefLink\n\tIf you believe this mail is not meant for you, ignore it and mail the webmaster or admin\@les-miquelots.net about it.\n\nKind regards,\nGpigeon mailing system at $hostname.") or $sentMailNotif = "$!";
         }
     }
     
-    if (defined $cgi_query_get->param('mail')){
-        my $link_asker = scalar $cgi_query_get->param('mail');
+    if (defined $cgiQueryGet->param('mail')){
+        my $linkAsker = scalar $cgiQueryGet->param('mail');
 
-        if ( Email::Valid->address($link_asker) ){
-            $mailisok_notif = qq{<span id="success">$text_strings{addr} $link_asker $text_strings{addr_ok}</span>};
-            my $str_rand_obj = String::Random->new;
-            my $random_fn = $str_rand_obj->randregex('\w{64}');
-            my $GENERATED_FORM_FILENAME = "$random_fn.cgi";
-            my $HREF_LINK   	 = "https://$hostname/cgi-bin/l/$userid/$GENERATED_FORM_FILENAME";
-            my $LINK_PATH 	 =  "./l/$userid/$GENERATED_FORM_FILENAME";
+        if ( Email::Valid->address($linkAsker) ){
+            $mailIsOkNotif = qq{<span id="success">$textStrings{addr} $linkAsker $textStrings{addr_ok}</span>};
+            my $StrRandObj = String::Random->new;
+            my $randomFilename = $StrRandObj->randregex('\w{64}');
+            my $generatedFormFilename = "$randomFilename.cgi";
+            my $hrefLink   	 = "https://$hostname/cgi-bin/l/$userID/$generatedFormFilename";
+            my $linkPath 	 =  "./l/$userID/$generatedFormFilename";
 
-            open my $in, '<', $link_template_path or die "Can't read link template file: $!";
-            open my $out, '>', $LINK_PATH or die "Can't write to link file: $!";
+            open my $in, '<', $linkTemplatePath or die "Can't read link template file: $!";
+            open my $out, '>', $linkPath or die "Can't write to link file: $!";
             while( <$in> ) {
-                s/{link_user}/{$link_asker}/g;
-                s/{user_mailaddr_goes_here}/{$user_mailaddr}/g;
+                s/{link_user}/{$linkAsker}/g;
+                s/{userMailAddr_goes_here}/{$userMailAddr}/g;
                 print $out $_;
             }
             close $in or die;
-            chmod(0755,$LINK_PATH) or die;
+            chmod(0755,$linkPath) or die;
             close $out or die;
 
-            $linkgen_notif = qq{<span id="success">$text_strings{link_generated_ok}: <br><a target="_blank" rel="noopener noreferrer nofollow" href="$HREF_LINK">$HREF_LINK</a></span>};          
-            if (defined $cgi_query_get->param('notiflinkbymail')){
-                SendGpigeonMail($link_asker,"[GPIGEON](Do not reply) Your encrypted form is ready","Greetings,\n\n\tAn encrypted form has been generated for you on $hostname.\n\tClick on the link below to fill in the form:\n\t$HREF_LINK\n\tIf you believe this mail is not meant for you, ignore it and mail the webmaster or admin\@les-miquelots.net about it.\n\nKind regards,\nGpigeon mailing system at $hostname.") or $sentmail_notif="$!" ;
+            $linkGenNotif = qq{<span id="success">$textStrings{link_generated_ok}: <br><a target="_blank" rel="noopener noreferrer nofollow" href="$hrefLink">$hrefLink</a></span>};          
+            if (defined $cgiQueryGet->param('notiflinkbymail')){
+                SendGpigeonMail($linkAsker,"[GPIGEON](Do not reply) Your encrypted form is ready","Greetings,\n\n\tAn encrypted form has been generated for you on $hostname.\n\tClick on the link below to fill in the form:\n\t$hrefLink\n\tIf you believe this mail is not meant for you, ignore it and mail the webmaster or admin\@les-miquelots.net about it.\n\nKind regards,\nGpigeon mailing system at $hostname.") or $sentMailNotif="$!" ;
             }
         }
         else{
-            $mailisok_notif = qq{<span id="failure">$text_strings{addr} $link_asker $text_strings{addr_nok}</span>};
+            $mailIsOkNotif = qq{<span id="failure">$textStrings{addr} $linkAsker $textStrings{addr_nok}</span>};
         }
     }
     
-    my @links_table = GetFileTable("l/$userid", $hidden_loginfield, $adminpan_field); 
+    my @linksTable = GetFileTable("l/$userID", $hiddenLoginField, $adminPanelField); 
 
     print 'Content-type: text/html',"\n\n";
-    if ($adminpanselect and $isadmin){
-	my @invites_table = GetFileTable("i/$userid", $hidden_loginfield, $adminpan_field);
+    if ($adminpanselect and $isAdmin){
+        my @invitesTable = GetFileTable("i/$userID", $hiddenLoginField, $adminPanelField);
 
 
-    print qq{<!DOCTYPE html>
-        <html> 
-            <head> 
-                <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
-                <link rel="stylesheet" type="text/css" href="/styles.css">
-                <meta http-equiv="content-type" content="text/html;charset=UTF-8">
-                <meta charset="UTF-8">
-                <title>$text_strings{web_title}</title>
-            </head>
-            <body>
-                <h1>GPIGEON - Admin panel</h1>
-                <p>Welcome to the admin panel. Here, you can view and generate account invites and also search and delete users.</p>
-                <form method="GET">
-                    $hidden_loginfield
-                    <input id="adminpanbtn" type="submit" value="Main panel">
-                </form>
-                <form method="GET">
-                    <input type="hidden" name="disconnect" value="1">
-                    <input id="logoutbtn" type="submit" value="$text_strings{disconnect_btn_text}">
-                </form>
-                $refresh_form
-            <hr>
-            <form method="POST">
-                $hidden_loginfield
-                $adminpan_field
-                <label for="opt-mail">
-                    $text_strings{optmail}
-                    <input tabindex="1" id="mailfield" type="text" name="opt-mail">
-                </label>
-                <input name="geninv" type="submit" id="geninvbtn" value="$text_strings{create_invite_btn}">
-                <label id="mailnotif" for="mailnotif">
-                    $text_strings{checkbox_invite_mailnotif}
-                    <input id="mailnotif-check" type="checkbox" name="mailnotif" value="1">
-                </label>
-
-                <label id="invitemail" for="invitemail">
-                    <input id="invitemail-check" type="checkbox" name="invitemail" value="1">$text_strings{checkbox_mailinvite}
-                </label>
-
-                <label id="adminprom" for="adminprom">
-                    $text_strings{checkbox_admin_user}
-                    <input id="adminprom-check" type="checkbox" name="adminprom" value="1">
-                </label>
-
-                <input name="geninv" type="submit" id="geninvbtn-mob" value="$text_strings{create_invite_btn}"><br>
-            $mailisok_notif
-            <br>
-            $linkgen_notif
-            <br>
-            $sentmail_notif
-            </form>
-            <hr>
-                    <form method="POST">
-                        $hidden_loginfield
-            $adminpan_field
-                        <input id="deleteallbtn" type="submit" name="delallinvites" value="$text_strings{delete_invites_btn_text}">
+        print qq{<!DOCTYPE html>
+            <html> 
+                <head> 
+                    <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
+                    <link rel="stylesheet" type="text/css" href="/styles.css">
+                    <meta http-equiv="content-type" content="text/html;charset=UTF-8">
+                    <meta charset="UTF-8">
+                    <title>$textStrings{web_title}</title>
+                </head>
+                <body>
+                    <h1>GPIGEON - Admin panel</h1>
+                    <p>Welcome to the admin panel. Here, you can view and generate account invites and also search and delete users.</p>
+                    <form method="GET">
+                        $hiddenLoginField
+                        <input id="adminpanbtn" type="submit" value="Main panel">
                     </form>
-                    $deletion_notif
-                    <table id="linkstable">
-                        <tr>
-                            <th>&#x1f517; $text_strings{theader_link}</th>
-                            <th>&#x1f4e7; $text_strings{theader_for} </th>
-                            <th>&#10060; $text_strings{theader_deletion}</th>
-                        </tr>
-                        <tbody>
-                        @invites_table
-                        </tbody>
-                    </table>
-		</body>
-		</html>
-    };
+                    <form method="GET">
+                        <input type="hidden" name="disconnect" value="1">
+                        <input id="logoutbtn" type="submit" value="$textStrings{disconnect_btn_text}">
+                    </form>
+                    $refreshForm
+                <hr>
+                <form method="POST">
+                    $hiddenLoginField
+                    $adminPanelField
+                    <label for="opt-mail">
+                        $textStrings{optmail}
+                        <input tabindex="1" id="mailfield" type="text" name="opt-mail">
+                    </label>
+                    <input name="geninv" type="submit" id="geninvbtn" value="$textStrings{create_invite_btn}">
+                    <label id="mailnotif" for="mailnotif">
+                        $textStrings{checkbox_invite_mailnotif}
+                        <input id="mailnotif-check" type="checkbox" name="mailnotif" value="1">
+                    </label>
+
+                    <label id="invitemail" for="invitemail">
+                        <input id="invitemail-check" type="checkbox" name="invitemail" value="1">$textStrings{checkbox_mailinvite}
+                    </label>
+
+                    <label id="adminprom" for="adminprom">
+                        $textStrings{checkbox_admin_user}
+                        <input id="adminprom-check" type="checkbox" name="adminprom" value="1">
+                    </label>
+
+                    <input name="geninv" type="submit" id="geninvbtn-mob" value="$textStrings{create_invite_btn}"><br>
+                $mailIsOkNotif
+                <br>
+                $linkGenNotif
+                <br>
+                $sentMailNotif
+                </form>
+                <hr>
+                        <form method="POST">
+                            $hiddenLoginField
+                $adminPanelField
+                            <input id="deleteallbtn" type="submit" name="delallinvites" value="$textStrings{delete_invites_btn_text}">
+                        </form>
+                        $deletionNotif
+                        <table id="linkstable">
+                            <tr>
+                                <th>&#x1f517; $textStrings{theader_link}</th>
+                                <th>&#x1f4e7; $textStrings{theader_for} </th>
+                                <th>&#10060; $textStrings{theader_deletion}</th>
+                            </tr>
+                            <tbody>
+                            @invitesTable
+                            </tbody>
+                        </table>
+            </body>
+            </html>
+        };
     }
     else {
-    print qq{<!DOCTYPE html>
-        <html> 
-            <head> 
-                <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
-                <link rel="stylesheet" type="text/css" href="/styles.css">
-                <meta http-equiv="content-type" content="text/html;charset=UTF-8">
-                <meta charset="UTF-8">
-                <title>$text_strings{web_title}</title>
-            </head>
-            <body>
-	    	<h1>$text_strings{web_title}</h1>
-                <p>$text_strings{web_greet_msg}</p>
-		$adminbtn
-                <form method="GET">
-                    <input type="hidden" name="disconnect" value="1">
-		            <input id="logoutbtn" type="submit" value="$text_strings{disconnect_btn_text}">
-                </form>
-		$refresh_form
-                <hr>
-                <br>
-                <form method="POST">
-                    $hidden_loginfield
-                    Mail:<br>
-                    <input id="mailfield" tabindex="1" placeholder="Link user mail address" type="text" name="mail">
-                    <input id="genlinkbtn" tabindex="2" type="submit" value="$text_strings{create_link_btn}">
-                    <label id="notiflinkbymail" for="notiflinkbymail">
-                    $text_strings{checkbox_notiflinkbymail}
-                        <input id="notiflinkbymail-check" type="checkbox" name="notiflinkbymail" value="1">
-                    </label>
-                </form>
-                $mailisok_notif
-                <br>
-                $linkgen_notif
-                <br>
-                $sentmail_notif
-                <hr>
-                <form method="POST">
-                    $hidden_loginfield
-                    <input id="deleteallbtn" name="supprtout" type="submit" value="$text_strings{delete_links_btn_text}">
-                </form>
-                $deletion_notif
-                <table id="linkstable">
-                    <tr>
-                        <th>&#x1f517; $text_strings{theader_link}</th>
-                        <th>&#x1f4e7; $text_strings{theader_for} </th>
-                        <th>&#10060; $text_strings{theader_deletion}</th>
-                    </tr>
-                    <tbody>
-                        @links_table
-                    </tbody>
-                </table>
-            </body>
-        </html>};
+        print qq{<!DOCTYPE html>
+            <html> 
+                <head> 
+                    <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
+                    <link rel="stylesheet" type="text/css" href="/styles.css">
+                    <meta http-equiv="content-type" content="text/html;charset=UTF-8">
+                    <meta charset="UTF-8">
+                    <title>$textStrings{web_title}</title>
+                </head>
+                <body>
+                <h1>$textStrings{web_title}</h1>
+                    <p>$textStrings{web_greet_msg}</p>
+            $adminbtn
+                    <form method="GET">
+                        <input type="hidden" name="disconnect" value="1">
+                        <input id="logoutbtn" type="submit" value="$textStrings{disconnect_btn_text}">
+                    </form>
+            $refreshForm
+                    <hr>
+                    <br>
+                    <form method="POST">
+                        $hiddenLoginField
+                        Mail:<br>
+                        <input id="mailfield" tabindex="1" placeholder="Link user mail address" type="text" name="mail">
+                        <input id="genlinkbtn" tabindex="2" type="submit" value="$textStrings{create_link_btn}">
+                        <label id="notiflinkbymail" for="notiflinkbymail">
+                        $textStrings{checkbox_notiflinkbymail}
+                            <input id="notiflinkbymail-check" type="checkbox" name="notiflinkbymail" value="1">
+                        </label>
+                    </form>
+                    $mailIsOkNotif
+                    <br>
+                    $linkGenNotif
+                    <br>
+                    $sentMailNotif
+                    <hr>
+                    <form method="POST">
+                        $hiddenLoginField
+                        <input id="deleteallbtn" name="supprtout" type="submit" value="$textStrings{delete_links_btn_text}">
+                    </form>
+                    $deletionNotif
+                    <table id="linkstable">
+                        <tr>
+                            <th>&#x1f517; $textStrings{theader_link}</th>
+                            <th>&#x1f4e7; $textStrings{theader_for} </th>
+                            <th>&#10060; $textStrings{theader_deletion}</th>
+                        </tr>
+                        <tbody>
+                            @linksTable
+                        </tbody>
+                    </table>
+                </body>
+            </html>};
 	}
 }
 else{
     $dbh->disconnect;
-    if (not $disconnect and defined $magic_cookie){
-        $login_notif = qq{<span id="failure">$text_strings{cookie_problems}</span>};
+    if (not $disconnect and defined $magicCookie){
+        $loginNotif = qq{<span id="failure">$textStrings{cookie_problems}</span>};
     }
     if (length($pass) > 0 or length($username) > 0){
-        $login_notif = qq{<span id="failure">$text_strings{incorrect_ids}</span>};
+        $loginNotif = qq{<span id="failure">$textStrings{incorrect_ids}</span>};
     }
     
     print "Content-type: text/html\n\n",
@@ -713,28 +713,28 @@ qq{<!DOCTYPE html>
            <meta charset="utf-8">
            <link rel="icon" type="image/x-icon" href="/favicon.ico">
            <link rel="stylesheet" type="text/css" href="/styles.css">
-           <title>$text_strings{landingpage_title}</title>
+           <title>$textStrings{landingpage_title}</title>
        </head>
        <body>
-           <h1>$text_strings{landingpage_title}</h1>
+           <h1>$textStrings{landingpage_title}</h1>
            <form action="/cgi-bin/gpigeon.cgi" method="POST">
                <table id="loginbox">
                    <tbody>
                        <tr>
-                           <td id="labels">$text_strings{username_label}</td>
+                           <td id="labels">$textStrings{username_label}</td>
                            <td><input size="30" type="text" name="username" autofocus tabindex=1></td>
                        </tr>
                        <tr>
-                           <td id="labels">$text_strings{password_label}</td>
+                           <td id="labels">$textStrings{password_label}</td>
                            <td><input size="30"  type="password" name="password" tabindex=2></td>
                        </tr>
                        <tr>
                             <td></td>
-                            <td id="loginerr">$login_notif</td>
+                            <td id="loginerr">$loginNotif</td>
                        </tr>
                        <tr id="authbtn">
                            <td></td>
-                           <td><input id="loginbtn" type="submit" value="$text_strings{loginbtn}" tabindex=3></td>
+                           <td><input id="loginbtn" type="submit" value="$textStrings{loginbtn}" tabindex=3></td>
                        </tr>
                    </tbody>
            </table>
