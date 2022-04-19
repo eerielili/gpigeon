@@ -572,6 +572,7 @@ if($loginOK){
         print qq{<!DOCTYPE html>
             <html> 
                 <head> 
+                    <meta name="viewport" content="width=device-width">
                     <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
                     <link rel="stylesheet" type="text/css" href="/styles.css">
                     <meta http-equiv="content-type" content="text/html;charset=UTF-8">
@@ -645,6 +646,7 @@ if($loginOK){
         print qq{<!DOCTYPE html>
             <html> 
                 <head> 
+                    <meta name="viewport" content="width=device-width">
                     <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
                     <link rel="stylesheet" type="text/css" href="/styles.css">
                     <meta http-equiv="content-type" content="text/html;charset=UTF-8">
@@ -710,6 +712,7 @@ else{
 qq{<!DOCTYPE html>
    <html lang="fr">
        <head>
+           <meta name="viewport" content="width=device-width">
            <meta charset="utf-8">
            <link rel="icon" type="image/x-icon" href="/favicon.ico">
            <link rel="stylesheet" type="text/css" href="/styles.css">

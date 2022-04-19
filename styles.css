@@ -88,6 +88,10 @@ h1, #msgbelow{
 	color: red
 }
 
+#loginbox{
+    margin:0 auto;
+}
+
 #loginbox, #inviteform{
 	border: none;
 	margin-right: auto;
