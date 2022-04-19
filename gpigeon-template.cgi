@@ -339,6 +339,7 @@ if (ValidCookie($IDCookie, $cookiesDir) or argon2id_verify($argon2idHash,$passwo
                 <link rel="icon" sizes="48x48" type="image/ico" href="/favicon.ico">
                 <link rel="stylesheet" type="text/css" href="/styles.css">
                 <meta http-equiv="content-type" content="text/html;charset=UTF-8">
+                <meta name="viewport" content="width=device-width">
                 <meta charset="UTF-8">
                 <title>$textStrings{mainpage_title}</title>
             </head>
@@ -399,6 +400,7 @@ else{
     <html lang="fr">
         <head>
             <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width">
             <link rel="icon" type="image/x-icon" href="/favicon.ico">
             <link rel="stylesheet" type="text/css" href="/styles.css">
             <title>$textStrings{landingpage_title}</title>

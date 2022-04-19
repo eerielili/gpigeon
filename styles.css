@@ -99,6 +99,8 @@ h1, #msgbelow{
 	border:none;
 }
 
+#loginbox{margin:0 auto}
+
 #authbtn td {
 	text-align:center;
 }
