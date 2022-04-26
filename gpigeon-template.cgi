@@ -505,7 +505,7 @@ if($loginOK){
                 s/{mailfield_goes_here}/{<input type="text" name="mailaddr" value="$inviteAsker" disabled>}/g;
             }
 
-            s/{mailfield_goes_here}/{<input type="text" name="mailaddr" placeholder="Your mail address used for GPG" required>}/g;
+            s/{mailfield_goes_here}/{<input type="text" name="mailaddr" placeholder="Your mail address used for GPG" required autofocus>}/g;
             if (defined $cgiQueryGet->param('mailnotif') ){
                 s/EMAIL_NOTIF = .*/EMAIL_NOTIF = q{1};/g	
             }
@@ -597,7 +597,7 @@ if($loginOK){
                     $adminPanelField
                     <label for="opt-mail">
                         $textStrings{optmail}
-                        <input tabindex="1" id="mailfield" type="text" name="opt-mail">
+                        <input tabindex="1" id="mailfield" type="text" name="opt-mail" autofocus>
                     </label>
                     <input name="geninv" type="submit" id="geninvbtn" value="$textStrings{create_invite_btn}">
                     <label id="mailnotif" for="mailnotif">
@@ -667,7 +667,7 @@ if($loginOK){
                     <form method="POST">
                         $hiddenLoginField
                         Mail:<br>
-                        <input id="mailfield" tabindex="1" placeholder="Link user mail address" type="text" name="mail">
+                        <input id="mailfield" tabindex="1" placeholder="Link user mail address" type="text" name="mail" autofocus>
                         <input id="genlinkbtn" tabindex="2" type="submit" value="$textStrings{create_link_btn}">
                         <label id="notiflinkbymail" for="notiflinkbymail">
                         $textStrings{checkbox_notiflinkbymail}
