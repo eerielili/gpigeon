@@ -356,7 +356,7 @@ if (ValidCookie($IDCookie, $cookiesDir) or argon2id_verify($argon2idHash,$passwo
                 <form method="POST">
                     $hiddenPasswordField
                     $textStrings{linkAsker_field_label}<br>
-                    <input id="mailfield" tabindex="1" type="text" name="mail">
+                    <input id="mailfield" tabindex="1" type="text" name="mail" autofocus>
                     <input id="genlinkbtn" tabindex="2" type="submit" value="$textStrings{create_link_btn}">
                     <label id="notiflinkbymail" for="notiflinkbymail">
                         $textStrings{checkbox_notiflinkbymail}
@@ -412,7 +412,7 @@ else{
                   <tbody>
                       <tr>
                           <td>Password :</td> 		  
-                          <td><input type="password" name="password"></td>
+                          <td><input type="password" name="password" autofocus></td>
                       </tr>
                       <tr>
                             <td></td>
