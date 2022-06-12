@@ -23,7 +23,7 @@ h1, #msgbelow{
 	border-bottom: none
 }
 
-#adminprom, #mailnotif, #invitemail{
+#adminprom, #mailnotif, #invitemail, #notiflinkbymail{
     display: block;
     padding: 3px
 }

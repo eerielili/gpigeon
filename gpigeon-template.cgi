@@ -670,8 +670,7 @@ if($loginOK){
                         <input id="mailfield" tabindex="1" placeholder="Link user mail address" type="text" name="mail" autofocus>
                         <input id="genlinkbtn" tabindex="2" type="submit" value="$textStrings{create_link_btn}">
                         <label id="notiflinkbymail" for="notiflinkbymail">
-                        $textStrings{checkbox_notiflinkbymail}
-                            <input id="notiflinkbymail-check" type="checkbox" name="notiflinkbymail" value="1">
+                            <input id="notiflinkbymail-check" type="checkbox" name="notiflinkbymail" value="1">$textStrings{checkbox_notiflinkbymail}
                         </label>
                     </form>
                     $mailIsOkNotif
