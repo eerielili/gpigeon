@@ -7,6 +7,9 @@ web link.
 Feels of déjàvu ? I was inspired by [https://hawkpost.co](https://hawkpost.co) but wasn't really
 interested in the multi-user perspective and managing a database.
 
+If you want a multi-user version, please check out the [registering+multiusersupport](https://git.les-miquelots.net/gpigeon/tree/?h=registering%2bmultiusersupport) branch.
+Word of warning, it's not totally completed.
+
 Features
 ========
 
